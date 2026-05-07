@@ -3,7 +3,9 @@ import {
   SettingHeader,
   SettingWrapper,
 } from '@affine/component/setting-components';
+import { AI_CUSTOM_MODEL_ID_KEY } from '@affine/core/modules/ai-button/services/models';
 import { WorkspaceServerService } from '@affine/core/modules/cloud';
+import { GlobalStateService } from '@affine/core/modules/storage';
 import { WorkspaceService } from '@affine/core/modules/workspace';
 import {
   ByokKeyStorage,
@@ -53,9 +55,11 @@ export const WorkspaceByokSetting = () => {
   const t = useI18n();
   const workspace = useService(WorkspaceService).workspace;
   const workspaceServer = useService(WorkspaceServerService);
+  const globalState = useService(GlobalStateService).globalState;
   const [settings, setSettings] = useState<ByokSettings | null>(null);
   const [usage, setUsage] = useState<ByokUsagePoint[]>([]);
   const [localKeys, setLocalKeys] = useState<ByokKey[]>([]);
+  const [customModelId, setCustomModelId] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingKey, setEditingKey] = useState<ByokKey | null>(null);
   const [draggingKey, setDraggingKey] = useState<{
@@ -100,6 +104,10 @@ export const WorkspaceByokSetting = () => {
       });
     });
   }, [load, t]);
+
+  useEffect(() => {
+    setCustomModelId(globalState.get<string>(AI_CUSTOM_MODEL_ID_KEY) ?? '');
+  }, [globalState]);
 
   const keys = useMemo(() => {
     return [...localKeys, ...(settings?.keys ?? [])].toSorted((a, b) => {
@@ -320,6 +328,47 @@ export const WorkspaceByokSetting = () => {
                 </div>
               </div>
             )}
+          </div>
+
+          <div className={styles.panel} data-testid="workspace-byok-model">
+            <div className={styles.panelHeader}>
+              <div>
+                <div className={styles.title}>Custom model</div>
+                <div className={styles.description}>
+                  Use a custom chat model id with your BYOK provider, for
+                  example gpt-4o, gpt-4.1, claude-3-5-sonnet-latest, or
+                  gemini-2.5-pro.
+                </div>
+              </div>
+            </div>
+            <div className={styles.modelForm}>
+              <input
+                className={styles.input}
+                value={customModelId}
+                onChange={event => setCustomModelId(event.target.value)}
+                placeholder="Provider model id"
+              />
+              <Button
+                variant="primary"
+                onClick={() => {
+                  const normalized = customModelId.trim();
+                  if (normalized) {
+                    globalState.set(AI_CUSTOM_MODEL_ID_KEY, normalized);
+                    globalState.set('AIModelId', normalized);
+                  } else {
+                    globalState.del(AI_CUSTOM_MODEL_ID_KEY);
+                    globalState.set('AIModelId', '');
+                  }
+                  notify.success({
+                    title: normalized
+                      ? 'Custom AI model saved'
+                      : 'Custom AI model cleared',
+                  });
+                }}
+              >
+                Save
+              </Button>
+            </div>
           </div>
 
           <CoveragePanel keys={keys} settings={settings} />

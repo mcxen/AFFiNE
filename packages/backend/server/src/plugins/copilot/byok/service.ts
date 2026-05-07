@@ -111,7 +111,7 @@ export class ByokService {
   ) {}
 
   get customEndpointSupported() {
-    return env.selfhosted;
+    return true;
   }
 
   async getSettings(

@@ -328,10 +328,13 @@ export default {
     name: productName,
     appBundleId: fromBuildIdentifier(appIdMap),
     icon: icnsPath,
-    osxSign: {
-      identity: 'Developer ID Application: TOEVERYTHING PTE. LTD.',
-      'hardened-runtime': true,
-    },
+    osxSign:
+      process.env.SKIP_OSX_SIGN === '1'
+        ? undefined
+        : {
+            identity: 'Developer ID Application: TOEVERYTHING PTE. LTD.',
+            'hardened-runtime': true,
+          },
     electronZipDir: process.env.ELECTRON_FORGE_ELECTRON_ZIP_DIR,
     osxNotarize: process.env.APPLE_ID
       ? {

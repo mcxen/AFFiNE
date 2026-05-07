@@ -10,6 +10,7 @@ import type { GraphQLService, SubscriptionService } from '../../cloud';
 import type { GlobalStateService } from '../../storage';
 
 const AI_MODEL_ID_KEY = 'AIModelId';
+export const AI_CUSTOM_MODEL_ID_KEY = 'AICustomModelId';
 
 export interface AIModel {
   name: string;
@@ -30,6 +31,11 @@ export class AIModelService extends Service {
     undefined
   );
 
+  private readonly customModelId$ = LiveData.from(
+    this.globalStateService.globalState.watch<string>(AI_CUSTOM_MODEL_ID_KEY),
+    undefined
+  );
+
   constructor(
     private readonly globalStateService: GlobalStateService,
     private readonly gqlService: GraphQLService,
@@ -43,13 +49,18 @@ export class AIModelService extends Service {
     this.modelId = modelId;
     this.disposables.push(cleanup);
 
+    const customModelSub = this.customModelId$.subscribe(customModelId => {
+      this.applyCustomModel(customModelId);
+    });
+    this.disposables.push(() => customModelSub.unsubscribe());
+
     this.init().catch(err => {
       console.error(err);
     });
   }
 
   resetModel = () => {
-    this.globalStateService.globalState.set(AI_MODEL_ID_KEY, undefined);
+    this.globalStateService.globalState.set(AI_MODEL_ID_KEY, '');
   };
 
   setModel = (modelId: string) => {
@@ -57,10 +68,64 @@ export class AIModelService extends Service {
       this.subscriptionService.subscription.ai$.value?.status ===
       SubscriptionStatus.Active;
     const model = this.models.value.find(model => model.id === modelId);
+    if (!model && modelId === this.getCustomModelId()) {
+      this.globalStateService.globalState.set(AI_MODEL_ID_KEY, modelId);
+      return;
+    }
     if (!isSubscribed && model?.isPro) {
       return;
     }
     this.globalStateService.globalState.set(AI_MODEL_ID_KEY, modelId);
+  };
+
+  setCustomModel = (modelId: string | undefined) => {
+    const previous = this.getCustomModelId();
+    const normalized = modelId?.trim() || undefined;
+    if (normalized) {
+      this.globalStateService.globalState.set(
+        AI_CUSTOM_MODEL_ID_KEY,
+        normalized
+      );
+      this.globalStateService.globalState.set(AI_MODEL_ID_KEY, normalized);
+    } else {
+      this.globalStateService.globalState.del(AI_CUSTOM_MODEL_ID_KEY);
+      this.applyCustomModel(undefined);
+      if (this.modelId.value === previous) {
+        this.resetModel();
+      }
+    }
+  };
+
+  private getCustomModelId() {
+    return this.globalStateService.globalState.get<string>(
+      AI_CUSTOM_MODEL_ID_KEY
+    );
+  }
+
+  private readonly applyCustomModel = (modelId?: string) => {
+    const normalized = modelId?.trim();
+    const withoutPreviousCustom = this.models.value.filter(
+      model => model.category !== 'Custom'
+    );
+    if (!normalized) {
+      this.models.value = withoutPreviousCustom;
+      return;
+    }
+    if (withoutPreviousCustom.some(model => model.id === normalized)) {
+      this.models.value = withoutPreviousCustom;
+      return;
+    }
+    this.models.value = [
+      {
+        name: normalized,
+        id: normalized,
+        version: normalized,
+        category: 'Custom',
+        isPro: false,
+        isDefault: false,
+      },
+      ...withoutPreviousCustom,
+    ];
   };
 
   private readonly init = async () => {
@@ -98,6 +163,7 @@ export class AIModelService extends Service {
           isDefault: model.id === defaultModel,
         };
       });
+      this.applyCustomModel(this.getCustomModelId());
     }
   };
 

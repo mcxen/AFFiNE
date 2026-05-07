@@ -56,18 +56,8 @@ export class ByokEntitlementPolicy {
     }
   }
 
-  async hasLocalEntitlement(workspaceId: string, userId?: string) {
-    if (env.selfhosted) return true;
-
-    if (await this.models.workspaceFeature.has(workspaceId, 'team_plan_v1')) {
-      return true;
-    }
-
-    const ownerId = await this.getWorkspaceOwnerId(workspaceId);
-    if (!ownerId) return false;
-
-    if (await this.hasAiPlan(userId)) return true;
-    return await this.hasAiPlan(ownerId);
+  async hasLocalEntitlement(_workspaceId: string, _userId?: string) {
+    return true;
   }
 
   async hasServerEntitlement(workspaceId: string) {
