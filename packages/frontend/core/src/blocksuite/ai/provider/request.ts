@@ -51,6 +51,12 @@ function errorMetadata(error: unknown) {
   };
 }
 
+function localByokLeaseError() {
+  return new Error(
+    'Local AI provider keys are configured, but AFFiNE could not pass them to the AI server. Reopen Settings > AI, test the key, and try again.'
+  );
+}
+
 async function createWorkspaceByokLocalLease(
   client: CopilotClient,
   workspaceId?: string
@@ -82,30 +88,22 @@ async function createWorkspaceByokLocalLease(
     });
     if (!leaseProviders.length) return undefined;
 
-    try {
-      const result = await client.gql({
-        query: createWorkspaceByokLocalLeaseMutation,
-        variables: {
-          input: {
-            workspaceId,
-            providers: leaseProviders,
-          },
+    const result = await client.gql({
+      query: createWorkspaceByokLocalLeaseMutation,
+      variables: {
+        input: {
+          workspaceId,
+          providers: leaseProviders,
         },
-      });
-      return result.createWorkspaceByokLocalLease.leaseId;
-    } catch (error) {
-      console.warn(
-        'Failed to create workspace BYOK local lease',
-        errorMetadata(error)
-      );
-      return undefined;
-    }
+      },
+    });
+    return result.createWorkspaceByokLocalLease.leaseId;
   } catch (error) {
     console.warn(
       'Failed to create workspace BYOK local lease',
       errorMetadata(error)
     );
-    return undefined;
+    throw localByokLeaseError();
   }
 }
 

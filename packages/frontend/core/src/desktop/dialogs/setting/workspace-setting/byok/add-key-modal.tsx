@@ -2,7 +2,6 @@ import { Button, Modal, notify } from '@affine/component';
 import { UserFriendlyError } from '@affine/error';
 import {
   ByokKeyStorage,
-  ByokKeyTestStatus,
   ByokProvider,
   testWorkspaceByokConfigMutation as testByokMutation,
   upsertWorkspaceByokConfigMutation as upsertByokMutation,
@@ -93,16 +92,8 @@ export const AddKeyModal = ({
   }, [canAddServerKey, editingKey, open]);
 
   const testKey = useCallback(async () => {
-    if (storage === ByokKeyStorage.local) {
-      setTestResult({
-        ok: true,
-        status: ByokKeyTestStatus.passed,
-        message: null,
-      });
-      return;
-    }
     if (!gql) {
-      return;
+      throw new Error('BYOK key test requires an AFFiNE server connection.');
     }
     setTesting(true);
     try {

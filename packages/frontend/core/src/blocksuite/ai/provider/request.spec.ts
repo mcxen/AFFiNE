@@ -97,7 +97,7 @@ describe('AI request BYOK local lease handling', () => {
     (globalThis as any).EventSource = originalEventSource;
   });
 
-  test('gracefully handles local BYOK lease creation failure', async () => {
+  test('fails closed when local BYOK lease creation fails', async () => {
     const client = createClient({
       gql: vi.fn().mockRejectedValue(new Error('mutation failed')),
       chatTextStream: vi.fn().mockReturnValue({
@@ -114,11 +114,11 @@ describe('AI request BYOK local lease handling', () => {
       content: 'hello',
     }) as Promise<string>;
 
-    await expect(result).resolves.toBe('');
-    expect(client.chatTextStream).toHaveBeenCalled();
+    await expect(result).rejects.toThrow('Local AI provider keys');
+    expect(client.chatTextStream).not.toHaveBeenCalled();
   });
 
-  test('gracefully handles local BYOK storage support check failure', async () => {
+  test('fails closed when local BYOK storage support check fails', async () => {
     electronApis.byokStorage = {
       isSupported: vi.fn().mockRejectedValue(new Error('support check failed')),
       getWorkspaceLeaseProviders: vi.fn(),
@@ -138,11 +138,11 @@ describe('AI request BYOK local lease handling', () => {
       content: 'hello',
     }) as Promise<string>;
 
-    await expect(result).resolves.toBe('');
-    expect(client.chatTextStream).toHaveBeenCalled();
+    await expect(result).rejects.toThrow('Local AI provider keys');
+    expect(client.chatTextStream).not.toHaveBeenCalled();
   });
 
-  test('gracefully handles local BYOK provider loading failure', async () => {
+  test('fails closed when local BYOK provider loading fails', async () => {
     electronApis.byokStorage = {
       isSupported: vi.fn().mockResolvedValue(true),
       getWorkspaceLeaseProviders: vi
@@ -164,8 +164,8 @@ describe('AI request BYOK local lease handling', () => {
       content: 'hello',
     }) as Promise<string>;
 
-    await expect(result).resolves.toBe('');
-    expect(client.chatTextStream).toHaveBeenCalled();
+    await expect(result).rejects.toThrow('Local AI provider keys');
+    expect(client.chatTextStream).not.toHaveBeenCalled();
   });
 
   test('does not create local BYOK lease after cancellation', async () => {

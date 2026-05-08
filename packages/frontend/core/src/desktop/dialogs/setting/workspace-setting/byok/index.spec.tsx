@@ -22,6 +22,10 @@ const electronApiState = vi.hoisted(() => ({
         byokStorage?: {
           isSupported: () => Promise<boolean>;
           listWorkspaceKeys: (workspaceId: string) => Promise<unknown[]>;
+          upsertWorkspaceKey?: (
+            workspaceId: string,
+            key: Record<string, unknown>
+          ) => Promise<unknown>;
         };
       }
     | undefined,
@@ -96,6 +100,7 @@ vi.mock('@affine/component', () => ({
     ) : null,
   notify: {
     error: vi.fn(),
+    success: vi.fn(),
   },
 }));
 
@@ -222,6 +227,12 @@ vi.mock('@blocksuite/icons/rc', () => ({
 
 vi.mock('@toeverything/infra', () => {
   return {
+    Service: class Service {},
+    LiveData: {
+      from: vi.fn(() => ({
+        subscribe: vi.fn(() => ({ unsubscribe: vi.fn() })),
+      })),
+    },
     useService: (token: unknown) => {
       if (token === WorkspaceServerServiceToken) {
         return {
@@ -238,6 +249,14 @@ vi.mock('@toeverything/infra', () => {
       if (token === GlobalStateServiceToken) {
         return {
           globalState,
+        };
+      }
+      if (
+        typeof token === 'function' &&
+        (token as { name?: string }).name === 'AIModelService'
+      ) {
+        return {
+          setCustomModel: vi.fn(),
         };
       }
       return {};
@@ -317,7 +336,7 @@ describe('WorkspaceByokSetting', () => {
     electronApiState.apis = undefined;
   });
 
-  test('renders locked state without key management controls', async () => {
+  test('renders read-only empty state without key management entitlement', async () => {
     gqlMock.mockImplementation(async ({ query }) => {
       if (query === workspaceByokSettingsQuery) {
         return settingsResponse({
@@ -331,9 +350,8 @@ describe('WorkspaceByokSetting', () => {
 
     render(<WorkspaceByokSetting />);
 
-    await screen.findByTestId('workspace-byok-locked');
-    expect(screen.queryByText('Add key')).toBeNull();
-    expect(screen.queryByTestId('workspace-byok-empty')).toBeNull();
+    await screen.findByTestId('workspace-byok-empty');
+    expect(screen.getByText<HTMLButtonElement>('Add key').disabled).toBe(true);
   });
 
   test('renders empty state and keeps save disabled until key test passes', async () => {
@@ -407,6 +425,74 @@ describe('WorkspaceByokSetting', () => {
       option => option.value === ByokKeyStorage.local
     );
     expect(localOption?.disabled).toBe(true);
+  });
+
+  test('tests local keys through backend probe before saving', async () => {
+    const upsertWorkspaceKey = vi.fn().mockResolvedValue({ id: 'local-key' });
+    vi.stubGlobal('BUILD_CONFIG', { isElectron: true });
+    electronApiState.apis = {
+      byokStorage: {
+        isSupported: vi.fn().mockResolvedValue(true),
+        listWorkspaceKeys: vi.fn().mockResolvedValue([]),
+        upsertWorkspaceKey,
+      },
+    };
+    gqlMock.mockImplementation(async ({ query }) => {
+      if (query === workspaceByokSettingsQuery) {
+        return settingsResponse({
+          serverEntitled: false,
+          localEntitled: true,
+          localStorageSupported: true,
+          customEndpointSupported: true,
+        });
+      }
+      if (query === testWorkspaceByokConfigMutation) {
+        return {
+          testWorkspaceByokConfig: {
+            ok: true,
+            status: 'passed',
+            message: null,
+          },
+        };
+      }
+      throw new Error('Unexpected GraphQL operation');
+    });
+
+    render(<WorkspaceByokSetting />);
+
+    await screen.findByTestId('workspace-byok-empty');
+    fireEvent.click(screen.getAllByText('Add key')[0]);
+    fireEvent.change(screen.getByPlaceholderText('Primary'), {
+      target: { value: 'Local OpenAI' },
+    });
+    fireEvent.change(screen.getByLabelText('API key'), {
+      target: { value: 'sk-local' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('https://api.example.com/v1'), {
+      target: { value: 'https://opencode.ai/zen/go/v1' },
+    });
+    fireEvent.click(screen.getByText('Test key'));
+
+    await waitFor(() => {
+      expect(gqlMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          query: testWorkspaceByokConfigMutation,
+          variables: expect.objectContaining({
+            input: expect.objectContaining({
+              storage: ByokKeyStorage.local,
+              apiKey: 'sk-local',
+              endpoint: 'https://opencode.ai/zen/go/v1',
+            }),
+          }),
+        })
+      );
+    });
+    await screen.findByText('Key verified');
+
+    fireEvent.click(screen.getByText('Save key'));
+    await waitFor(() => {
+      expect(upsertWorkspaceKey).toHaveBeenCalled();
+    });
   });
 
   test('reorders server keys within their storage bucket', async () => {
