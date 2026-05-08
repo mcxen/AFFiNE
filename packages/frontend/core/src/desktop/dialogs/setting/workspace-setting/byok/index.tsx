@@ -22,7 +22,7 @@ import { useI18n } from '@affine/i18n';
 import { useService } from '@toeverything/infra';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { AIProvider } from '../../../../blocksuite/ai/provider';
+import { AIProvider } from '../../../../../blocksuite/ai/provider';
 import { AddKeyModal } from './add-key-modal';
 import { CoveragePanel } from './coverage';
 import { logByokError } from './errors';
