@@ -12,6 +12,7 @@ import type { Store, Workspace } from '@blocksuite/affine/store';
 import { ToggleRightIcon } from '@blocksuite/icons/rc';
 import * as Collapsible from '@radix-ui/react-collapsible';
 import type { DialogContentProps } from '@radix-ui/react-dialog';
+import { useAtom } from 'jotai';
 import { useLiveData, useService } from '@toeverything/infra';
 import type { PropsWithChildren } from 'react';
 import {
