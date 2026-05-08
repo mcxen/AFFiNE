@@ -1,4 +1,5 @@
 import { Button, Modal, notify } from '@affine/component';
+import { UserFriendlyError } from '@affine/error';
 import {
   ByokKeyStorage,
   ByokKeyTestStatus,
@@ -57,11 +58,12 @@ export const AddKeyModal = ({
   const [endpoint, setEndpoint] = useState('');
   const [testResult, setTestResult] = useState<ByokTestResult | null>(null);
   const [testing, setTesting] = useState(false);
+  const normalizedName = name.trim();
   const isEditingServerKey =
     editingKey?.storage === ByokKeyStorage.server &&
     storage === ByokKeyStorage.server;
   const canSave =
-    !!name &&
+    !!normalizedName &&
     (storage === ByokKeyStorage.local
       ? !!apiKey
       : isEditingServerKey || !!apiKey);
@@ -141,6 +143,22 @@ export const AddKeyModal = ({
     t,
     workspaceId,
   ]);
+
+  const errorMessage = useCallback(
+    (error: unknown) => {
+      const userFriendlyError = UserFriendlyError.fromAny(error);
+      if (
+        userFriendlyError.name === 'INTERNAL_SERVER_ERROR' ||
+        userFriendlyError.message === 'INTERNAL_SERVER_ERROR'
+      ) {
+        return byokT(t, 'notify.operation-failed.message');
+      }
+      return (
+        userFriendlyError.message || byokT(t, 'notify.operation-failed.message')
+      );
+    },
+    [t]
+  );
 
   const save = useCallback(async () => {
     if (storage === ByokKeyStorage.local) {
@@ -330,13 +348,9 @@ export const AddKeyModal = ({
             onClick={() => {
               testKey().catch(error => {
                 logByokError('Failed to test BYOK key', error);
-                const message =
-                  error instanceof Error
-                    ? error.message
-                    : byokT(t, 'notify.operation-failed.message');
                 notify.error({
                   title: byokT(t, 'notify.test-failed.title'),
-                  message,
+                  message: errorMessage(error),
                 });
               });
             }}
@@ -352,13 +366,9 @@ export const AddKeyModal = ({
             onClick={() => {
               save().catch(error => {
                 logByokError('Failed to save BYOK key', error);
-                const message =
-                  error instanceof Error
-                    ? error.message
-                    : byokT(t, 'notify.operation-failed.message');
                 notify.error({
                   title: byokT(t, 'notify.save-failed.title'),
-                  message,
+                  message: errorMessage(error),
                 });
               });
             }}
