@@ -177,7 +177,7 @@ const SettingModalInner = ({
       (settingState.activeTab === 'plans' ||
         settingState.activeTab === 'workspace:billing')
     ) {
-      setSettingState({ activeTab: 'workspace:license' });
+      setSettingState({ activeTab: 'workspace:preference' });
     }
   }, [isSelfhosted, settingState.activeTab]);
 

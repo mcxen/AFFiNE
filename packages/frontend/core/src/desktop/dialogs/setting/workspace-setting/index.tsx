@@ -18,8 +18,8 @@ import { useLiveData, useService } from '@toeverything/infra';
 import { useMemo } from 'react';
 
 import type { SettingSidebarItem, SettingState } from '../types';
-import { WorkspaceByokSetting } from './byok';
 import { WorkspaceSettingBilling } from './billing';
+import { WorkspaceByokSetting } from './byok';
 import { IntegrationSetting } from './integration';
 import { WorkspaceSettingLicense } from './license';
 import { WorkspaceSettingDetail } from './preference';
@@ -46,7 +46,7 @@ export const WorkspaceSetting = ({
     case 'workspace:storage':
       return <WorkspaceSettingStorage onCloseSetting={onCloseSetting} />;
     case 'workspace:license':
-      return <WorkspaceSettingLicense onCloseSetting={onCloseSetting} />;
+      return <WorkspaceSettingLicense />;
     case 'workspace:integrations':
       return <IntegrationSetting scrollAnchor={scrollAnchor} />;
     case 'workspace:embedding':
@@ -73,7 +73,6 @@ export const useWorkspaceSettingList = (): SettingSidebarItem[] => {
 
   const showBilling =
     !isSelfhosted && information?.isTeam && information?.isOwner;
-  const showLicense = information?.isOwner && isSelfhosted;
   const items = useMemo<SettingSidebarItem[]>(() => {
     return [
       {
@@ -121,14 +120,8 @@ export const useWorkspaceSettingList = (): SettingSidebarItem[] => {
         icon: <PaymentIcon />,
         testId: 'workspace-setting:billing',
       },
-      showLicense && {
-        key: 'workspace:license' as SettingTab,
-        title: t['com.affine.settings.workspace.license'](),
-        icon: <PaymentIcon />,
-        testId: 'workspace-setting:license',
-      },
     ].filter((item): item is SettingSidebarItem => !!item);
-  }, [showBilling, showLicense, t]);
+  }, [showBilling, t]);
 
   return items;
 };

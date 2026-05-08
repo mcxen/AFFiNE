@@ -15,16 +15,12 @@ import {
   verify,
 } from 'node:crypto';
 
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
   hash as hashPassword,
   verify as verifyPassword,
 } from '@node-rs/argon2';
 
-import {
-  AFFINE_PRO_LICENSE_AES_KEY,
-  AFFINE_PRO_PUBLIC_KEY,
-} from '../../native';
 import { Config } from '../config';
 import { OnEvent } from '../event';
 
@@ -64,9 +60,7 @@ function parseKey(privateKey: string) {
 }
 
 @Injectable()
-export class CryptoHelper implements OnModuleInit {
-  logger = new Logger(CryptoHelper.name);
-
+export class CryptoHelper {
   keyPair!: {
     publicKey: KeyObject;
     privateKey: KeyObject;
@@ -77,16 +71,6 @@ export class CryptoHelper implements OnModuleInit {
   };
 
   private previousPublicKeys: KeyObject[] = [];
-
-  AFFiNEProPublicKey: Buffer | null = null;
-  AFFiNEProLicenseAESKey: Buffer | null = null;
-
-  onModuleInit() {
-    if (env.selfhosted) {
-      this.AFFiNEProPublicKey = this.loadAFFiNEProPublicKey();
-      this.AFFiNEProLicenseAESKey = this.loadAFFiNEProLicenseAESKey();
-    }
-  }
 
   constructor(private readonly config: Config) {}
 
@@ -304,35 +288,5 @@ export class CryptoHelper implements OnModuleInit {
 
   sha256(data: string) {
     return createHash('sha256').update(data).digest();
-  }
-
-  private loadAFFiNEProPublicKey() {
-    if (AFFINE_PRO_PUBLIC_KEY) {
-      return Buffer.from(AFFINE_PRO_PUBLIC_KEY);
-    } else {
-      this.logger.warn('AFFINE_PRO_PUBLIC_KEY is not set at compile time.');
-    }
-
-    if (!env.prod && process.env.AFFiNE_PRO_PUBLIC_KEY) {
-      return Buffer.from(process.env.AFFiNE_PRO_PUBLIC_KEY);
-    }
-
-    return null;
-  }
-
-  private loadAFFiNEProLicenseAESKey() {
-    if (AFFINE_PRO_LICENSE_AES_KEY) {
-      return this.sha256(AFFINE_PRO_LICENSE_AES_KEY);
-    } else {
-      this.logger.warn(
-        'AFFINE_PRO_LICENSE_AES_KEY is not set at compile time.'
-      );
-    }
-
-    if (!env.prod && process.env.AFFiNE_PRO_LICENSE_AES_KEY) {
-      return this.sha256(process.env.AFFiNE_PRO_LICENSE_AES_KEY);
-    }
-
-    return null;
   }
 }

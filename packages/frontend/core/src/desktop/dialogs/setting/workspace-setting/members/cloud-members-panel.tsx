@@ -24,7 +24,6 @@ import { UserFriendlyError } from '@affine/error';
 import type { WorkspaceInviteLinkExpireTime } from '@affine/graphql';
 import { ServerDeploymentType, SubscriptionPlan } from '@affine/graphql';
 import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
 import { ExportIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { nanoid } from 'nanoid';
@@ -106,7 +105,7 @@ export const CloudWorkspaceMembersPanel = ({
   const { openConfirmModal, closeConfirmModal } = useConfirmModal();
   const goToTeamBilling = useCallback(() => {
     onChangeSettingState({
-      activeTab: isSelfhosted ? 'workspace:license' : 'workspace:billing',
+      activeTab: isSelfhosted ? 'workspace:preference' : 'workspace:billing',
     });
   }, [isSelfhosted, onChangeSettingState]);
   const [idempotencyKey, setIdempotencyKey] = useState(nanoid());
@@ -243,14 +242,8 @@ export const CloudWorkspaceMembersPanel = ({
   );
 
   const handleUpgradeConfirm = useCallback(() => {
-    onChangeSettingState({
-      activeTab: 'plans',
-      scrollAnchor: 'cloudPricingPlan',
-    });
-    track.$.settingsPanel.workspace.viewPlans({
-      control: 'inviteMember',
-    });
-  }, [onChangeSettingState]);
+    setOpenMemberLimit(false);
+  }, []);
 
   const desc = useMemo(() => {
     if (!workspaceQuota) return null;
