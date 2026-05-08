@@ -40,7 +40,7 @@ function createTrackerState(): TrackerState {
   const hasClientId = !!clientStorage?.getItem(CLIENT_ID_KEY);
 
   return {
-    enabled: true,
+    enabled: false,
     clientStorage,
     clientId: readPersistentId(CLIENT_ID_KEY, clientStorage),
     pendingFirstVisit: !hasClientId,

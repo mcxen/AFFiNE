@@ -3,10 +3,16 @@ import {
   SettingHeader,
   SettingWrapper,
 } from '@affine/component/setting-components';
+import {
+  AI_CUSTOM_MODEL_ID_KEY,
+  AIModelService,
+} from '@affine/core/modules/ai-button/services/models';
 import { WorkspaceServerService } from '@affine/core/modules/cloud';
+import { GlobalStateService } from '@affine/core/modules/storage';
 import { WorkspaceService } from '@affine/core/modules/workspace';
 import {
   ByokKeyStorage,
+  ByokProvider,
   clearWorkspaceByokConfigsMutation as clearByokMutation,
   deleteWorkspaceByokConfigMutation as deleteByokMutation,
   type GraphQLQuery,
@@ -16,6 +22,7 @@ import { useI18n } from '@affine/i18n';
 import { useService } from '@toeverything/infra';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { AIProvider } from '../../../../blocksuite/ai/provider';
 import { AddKeyModal } from './add-key-modal';
 import { CoveragePanel } from './coverage';
 import { logByokError } from './errors';
@@ -38,6 +45,20 @@ import type {
 } from './types';
 import { UsagePanel } from './usage';
 
+const LOCAL_BYOK_SETTINGS = {
+  workspaceId: '',
+  entitled: true,
+  serverEntitled: false,
+  localEntitled: true,
+  entitlementRequired: [],
+  keys: [],
+  allowedProviders: Object.values(ByokProvider),
+  localStorageSupported: true,
+  customEndpointSupported: true,
+  hasAiPlan: false,
+  warnings: [],
+} satisfies ByokSettings;
+
 const reorderByokMutation = {
   id: 'reorderWorkspaceByokConfigsMutation',
   op: 'reorderWorkspaceByokConfigs',
@@ -53,9 +74,13 @@ export const WorkspaceByokSetting = () => {
   const t = useI18n();
   const workspace = useService(WorkspaceService).workspace;
   const workspaceServer = useService(WorkspaceServerService);
+  const globalState = useService(GlobalStateService).globalState;
+  const aiModelService = useService(AIModelService);
   const [settings, setSettings] = useState<ByokSettings | null>(null);
   const [usage, setUsage] = useState<ByokUsagePoint[]>([]);
   const [localKeys, setLocalKeys] = useState<ByokKey[]>([]);
+  const [customModelId, setCustomModelId] = useState('');
+  const [checkingModel, setCheckingModel] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingKey, setEditingKey] = useState<ByokKey | null>(null);
   const [draggingKey, setDraggingKey] = useState<{
@@ -64,31 +89,48 @@ export const WorkspaceByokSetting = () => {
   } | null>(null);
 
   const load = useCallback(async () => {
-    if (!workspaceServer.server) {
-      return;
-    }
-    const to = new Date();
-    const from = new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const gql = workspaceServer.server.gql as GqlFn;
-    const data = await gql({
-      query: byokSettingsQuery,
-      variables: {
-        id: workspace.id,
-        from: from.toISOString(),
-        to: to.toISOString(),
-      },
-    });
     const [localStorageSupported, nextLocalKeys] = await Promise.all([
       localByokStorageSupported(),
       readLocalKeys(workspace.id),
     ]);
-    setSettings({
-      ...data.workspace.byokSettings,
-      localStorageSupported:
-        data.workspace.byokSettings.localEntitled && localStorageSupported,
-    });
-    setUsage(data.workspace.byokUsage);
     setLocalKeys(nextLocalKeys);
+
+    const localOnlySettings = {
+      ...LOCAL_BYOK_SETTINGS,
+      workspaceId: workspace.id,
+      localStorageSupported,
+      entitled: true,
+      localEntitled: true,
+    };
+
+    if (!workspaceServer.server) {
+      setSettings(localOnlySettings);
+      setUsage([]);
+      return;
+    }
+
+    try {
+      const to = new Date();
+      const from = new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const gql = workspaceServer.server.gql as GqlFn;
+      const data = await gql({
+        query: byokSettingsQuery,
+        variables: {
+          id: workspace.id,
+          from: from.toISOString(),
+          to: to.toISOString(),
+        },
+      });
+      setSettings({
+        ...data.workspace.byokSettings,
+        localStorageSupported,
+      });
+      setUsage(data.workspace.byokUsage);
+    } catch (error) {
+      logByokError('Failed to load server BYOK settings, using local', error);
+      setSettings(localOnlySettings);
+      setUsage([]);
+    }
   }, [workspace.id, workspaceServer.server]);
 
   useEffect(() => {
@@ -100,6 +142,10 @@ export const WorkspaceByokSetting = () => {
       });
     });
   }, [load, t]);
+
+  useEffect(() => {
+    setCustomModelId(globalState.get<string>(AI_CUSTOM_MODEL_ID_KEY) ?? '');
+  }, [globalState]);
 
   const keys = useMemo(() => {
     return [...localKeys, ...(settings?.keys ?? [])].toSorted((a, b) => {
@@ -114,6 +160,56 @@ export const WorkspaceByokSetting = () => {
     (settings?.localEntitled ?? false) &&
     (settings?.localStorageSupported ?? false);
   const canManageKeys = canAddServerKey || canAddLocalKey;
+  const checkModelConnectivity = useCallback(async () => {
+    const normalized = customModelId.trim();
+    if (!normalized) {
+      notify.error({
+        title: 'Model id is required',
+        message: 'Enter a provider model id first.',
+      });
+      return;
+    }
+    if (!AIProvider.actions.chat) {
+      notify.error({
+        title: 'AI is unavailable',
+        message: 'AI provider is not ready in current client context.',
+      });
+      return;
+    }
+
+    setCheckingModel(true);
+    const abortController = new AbortController();
+    const timeout = setTimeout(() => abortController.abort(), 15000);
+    try {
+      const stream = await AIProvider.actions.chat({
+        input: 'ping',
+        workspaceId: workspace.id,
+        stream: true,
+        signal: abortController.signal,
+        modelId: normalized,
+      });
+      for await (const _chunk of stream) {
+        notify.success({
+          title: 'Model connectivity check passed',
+          message: `${normalized} responded successfully.`,
+        });
+        return;
+      }
+      notify.error({
+        title: 'Model connectivity check failed',
+        message: 'No response received from model stream.',
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      notify.error({
+        title: 'Model connectivity check failed',
+        message,
+      });
+    } finally {
+      clearTimeout(timeout);
+      setCheckingModel(false);
+    }
+  }, [customModelId, workspace.id]);
 
   const clearAll = useCallback(async () => {
     if (!settings) {
@@ -210,59 +306,14 @@ export const WorkspaceByokSetting = () => {
   );
 
   if (!settings) {
-    return (
-      <SettingHeader
-        title={byokT(t, 'title-beta')}
-        subtitle={byokT(t, 'loading')}
-      />
-    );
-  }
-
-  if (!settings.entitled) {
-    return (
-      <>
-        <SettingHeader
-          title={byokT(t, 'title-beta')}
-          subtitle={byokT(t, 'subtitle')}
-        />
-        <SettingWrapper>
-          <div className={styles.locked} data-testid="workspace-byok-locked">
-            <div>
-              <div className={styles.title}>{byokT(t, 'locked.title')}</div>
-              <div className={styles.description}>
-                {byokT(t, 'locked.description')}
-              </div>
-            </div>
-            <div className={styles.tags}>
-              {settings.entitlementRequired.map(plan => (
-                <span className={styles.tag} key={plan}>
-                  {plan}
-                </span>
-              ))}
-            </div>
-          </div>
-        </SettingWrapper>
-      </>
-    );
+    return <SettingHeader title="AI" subtitle={byokT(t, 'loading')} />;
   }
 
   return (
     <>
-      <SettingHeader
-        title={byokT(t, 'title-beta')}
-        subtitle={byokT(t, 'header')}
-      />
+      <SettingHeader title="AI" subtitle={byokT(t, 'header')} />
       <SettingWrapper>
         <div className={styles.stack}>
-          {settings.hasAiPlan ? (
-            <div className={styles.notice}>
-              <div className={styles.title}>{byokT(t, 'notice.title')}</div>
-              <div className={styles.description}>
-                {byokT(t, 'notice.description')}
-              </div>
-            </div>
-          ) : null}
-
           <div className={styles.panel} data-testid="workspace-byok-keys">
             <div className={styles.panelHeader}>
               <div>
@@ -322,21 +373,70 @@ export const WorkspaceByokSetting = () => {
             )}
           </div>
 
-          <CoveragePanel keys={keys} settings={settings} />
+          <div className={styles.panel} data-testid="workspace-byok-model">
+            <div className={styles.panelHeader}>
+              <div>
+                <div className={styles.title}>Custom model</div>
+                <div className={styles.description}>
+                  Use a custom chat model id with your BYOK provider, for
+                  example gpt-4o, gpt-4.1, claude-3-5-sonnet-latest, or
+                  gemini-2.5-pro.
+                </div>
+              </div>
+            </div>
+            <div className={styles.modelForm}>
+              <input
+                className={styles.input}
+                value={customModelId}
+                onChange={event => setCustomModelId(event.target.value)}
+                placeholder="Provider model id"
+              />
+              <Button
+                onClick={() => {
+                  checkModelConnectivity().catch(error => {
+                    logByokError('Failed to check BYOK model connectivity', error);
+                  });
+                }}
+                disabled={checkingModel}
+              >
+                {checkingModel ? 'Checking...' : 'Check connectivity'}
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  const normalized = customModelId.trim();
+                  aiModelService.setCustomModel(normalized);
+                  notify.success({
+                    title: normalized
+                      ? 'Custom AI model saved'
+                      : 'Custom AI model cleared',
+                  });
+                }}
+              >
+                Save
+              </Button>
+            </div>
+          </div>
 
-          <UsagePanel
-            keys={keys}
-            usage={usage}
-            onClearAll={() => {
-              clearAll().catch(error => {
-                logByokError('Failed to clear BYOK keys', error);
-                notify.error({
-                  title: byokT(t, 'notify.clear-failed.title'),
-                  message: byokT(t, 'notify.operation-failed.message'),
+          {settings.serverEntitled ? (
+            <CoveragePanel keys={keys} settings={settings} />
+          ) : null}
+
+          {settings.serverEntitled ? (
+            <UsagePanel
+              keys={keys}
+              usage={usage}
+              onClearAll={() => {
+                clearAll().catch(error => {
+                  logByokError('Failed to clear BYOK keys', error);
+                  notify.error({
+                    title: byokT(t, 'notify.clear-failed.title'),
+                    message: byokT(t, 'notify.operation-failed.message'),
+                  });
                 });
-              });
-            }}
-          />
+              }}
+            />
+          ) : null}
         </div>
       </SettingWrapper>
       <AddKeyModal

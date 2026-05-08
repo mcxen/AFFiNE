@@ -16,8 +16,8 @@ import { toBuffer, UseNamedGuard } from '../../base';
 import { CurrentUser } from '../../core/auth';
 import { AccessController } from '../../core/permission';
 import { WorkspaceType } from '../../core/workspaces';
-import { SubscriptionRecurring, SubscriptionVariant } from '../payment/types';
 import { LicenseService } from './service';
+import { SubscriptionRecurring, SubscriptionVariant } from './types';
 
 @ObjectType()
 export class License {
@@ -60,7 +60,7 @@ export class LicenseResolver {
     await this.ac
       .user(user.id)
       .workspace(workspace.id)
-      .assert('Workspace.Payment.Manage');
+      .assert('Workspace.Settings.Update');
     return this.service.getLicense(workspace.id);
   }
 
@@ -73,7 +73,7 @@ export class LicenseResolver {
     await this.ac
       .user(user.id)
       .workspace(workspaceId)
-      .assert('Workspace.Payment.Manage');
+      .assert('Workspace.Settings.Update');
 
     return this.service.activateTeamLicense(workspaceId, license);
   }
@@ -86,24 +86,9 @@ export class LicenseResolver {
     await this.ac
       .user(user.id)
       .workspace(workspaceId)
-      .assert('Workspace.Payment.Manage');
+      .assert('Workspace.Settings.Update');
 
     return this.service.removeTeamLicense(workspaceId);
-  }
-
-  @Mutation(() => String)
-  async createSelfhostWorkspaceCustomerPortal(
-    @CurrentUser() user: CurrentUser,
-    @Args('workspaceId') workspaceId: string
-  ) {
-    await this.ac
-      .user(user.id)
-      .workspace(workspaceId)
-      .assert('Workspace.Payment.Manage');
-
-    const { url } = await this.service.createCustomerPortal(workspaceId);
-
-    return url;
   }
 
   @Mutation(() => License)
@@ -115,7 +100,7 @@ export class LicenseResolver {
     await this.ac
       .user(user.id)
       .workspace(workspaceId)
-      .assert('Workspace.Payment.Manage');
+      .assert('Workspace.Settings.Update');
 
     const buffer = await toBuffer(licenseFile.createReadStream());
 

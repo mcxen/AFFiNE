@@ -18,13 +18,12 @@ import type { AffineEditorContainer } from '@affine/core/blocksuite/block-suite-
 import { NotificationServiceImpl } from '@affine/core/blocksuite/view-extensions/editor-view/notification-service';
 import { useAIChatConfig } from '@affine/core/components/hooks/affine/use-ai-chat-config';
 import { useAISpecs } from '@affine/core/components/hooks/affine/use-ai-specs';
-import { useAISubscribe } from '@affine/core/components/hooks/affine/use-ai-subscribe';
 import {
   AIDraftService,
   AIToolsConfigService,
 } from '@affine/core/modules/ai-button';
 import { AIModelService } from '@affine/core/modules/ai-button/services/models';
-import { ServerService, SubscriptionService } from '@affine/core/modules/cloud';
+import { ServerService } from '@affine/core/modules/cloud';
 import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
 import { useSignalValue } from '@affine/core/modules/doc-info/utils';
 import { FeatureFlagService } from '@affine/core/modules/feature-flag';
@@ -76,7 +75,6 @@ export const EditorChatPanel = ({ editor, onLoad }: SidebarTabProps) => {
     [closeConfirmModal, openConfirmModal]
   );
   const specs = useAISpecs();
-  const handleAISubscribe = useAISubscribe();
 
   const {
     docDisplayConfig,
@@ -547,9 +545,7 @@ export const EditorChatPanel = ({ editor, onLoad }: SidebarTabProps) => {
     content.aiDraftService = framework.get(AIDraftService);
     content.aiToolsConfigService = framework.get(AIToolsConfigService);
     content.peekViewService = framework.get(PeekViewService);
-    content.subscriptionService = framework.get(SubscriptionService);
     content.aiModelService = framework.get(AIModelService);
-    content.onAISubscribe = handleAISubscribe;
     content.onEmbeddingProgressChange = onEmbeddingProgressChange;
     content.onContextChange = onContextChange;
     content.width = sidebarWidthSignal;
@@ -568,7 +564,6 @@ export const EditorChatPanel = ({ editor, onLoad }: SidebarTabProps) => {
     doc,
     docDisplayConfig,
     framework,
-    handleAISubscribe,
     host,
     isBodyProvided,
     notificationService,
@@ -723,7 +718,6 @@ export const EditorChatPanel = ({ editor, onLoad }: SidebarTabProps) => {
         .notificationService=${notificationService}
         .affineWorkspaceDialogService=${framework.get(WorkspaceDialogService)}
         .aiToolsConfigService=${framework.get(AIToolsConfigService)}
-        .subscriptionService=${framework.get(SubscriptionService)}
         .aiModelService=${framework.get(AIModelService)}
       ></playground-content>
     `;

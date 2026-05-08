@@ -61,7 +61,7 @@ function stubConversationSession(latestUserTurn?: unknown) {
   };
 }
 
-test('ConversationPolicy should treat zero quota limit as exhausted', async t => {
+test('ConversationPolicy should not block AI usage by quota', async t => {
   const policy = new ConversationPolicy(
     {
       userFeature: { has: Sinon.stub().resolves(false) },
@@ -72,8 +72,8 @@ test('ConversationPolicy should treat zero quota limit as exhausted', async t =>
     } as any
   );
 
-  t.false(await policy.hasQuota('user-1'));
-  await t.throwsAsync(policy.checkQuota('user-1'));
+  t.true(await policy.hasQuota('user-1'));
+  await t.notThrowsAsync(policy.checkQuota('user-1'));
 });
 
 type TurnRouteAccessCase = {
@@ -83,23 +83,22 @@ type TurnRouteAccessCase = {
   byokLeaseId?: string;
   quotaBackedRoutesAllowed?: boolean;
   expectedQuotaCalls: number;
-  expectedError?: string;
   expectedQuotaBackedRoutesAllowed?: boolean;
 };
 
 const turnRouteAccessCases: TurnRouteAccessCase[] = [
   {
-    name: 'checks quota when BYOK does not cover the route',
+    name: 'allows quota-backed routes when BYOK does not cover the route',
     profiles: [],
-    expectedQuotaCalls: 1,
-    expectedError: 'quota exceeded',
+    expectedQuotaCalls: 0,
+    expectedQuotaBackedRoutesAllowed: true,
   },
   {
-    name: 'skips quota when BYOK covers the route',
+    name: 'allows quota-backed routes when BYOK covers the route',
     profiles: [{ id: 'profile-1' }],
     byokLeaseId: 'lease-1',
     expectedQuotaCalls: 0,
-    expectedQuotaBackedRoutesAllowed: undefined,
+    expectedQuotaBackedRoutesAllowed: true,
   },
   {
     name: 'preserves explicit quota-backed route disable override',
@@ -109,7 +108,7 @@ const turnRouteAccessCases: TurnRouteAccessCase[] = [
     expectedQuotaBackedRoutesAllowed: false,
   },
   {
-    name: 'does not check user quota for unmetered service features',
+    name: 'allows unmetered service features',
     profiles: [],
     featureKind: 'rerank',
     expectedQuotaCalls: 0,
@@ -126,7 +125,7 @@ for (const matrixCase of turnRouteAccessCases) {
       { getProfiles } as any
     );
 
-    const promise = access.resolveTurnRouteAccess({
+    const routeAccess = await access.resolveTurnRouteAccess({
       userId: 'user-1',
       workspaceId: 'workspace-1',
       byokLeaseId: matrixCase.byokLeaseId,
@@ -134,15 +133,10 @@ for (const matrixCase of turnRouteAccessCases) {
       quotaBackedRoutesAllowed: matrixCase.quotaBackedRoutesAllowed,
     });
 
-    if (matrixCase.expectedError) {
-      await t.throwsAsync(promise, { message: matrixCase.expectedError });
-    } else {
-      const routeAccess = await promise;
-      t.is(
-        routeAccess.quotaBackedRoutesAllowed,
-        matrixCase.expectedQuotaBackedRoutesAllowed
-      );
-    }
+    t.is(
+      routeAccess.quotaBackedRoutesAllowed,
+      matrixCase.expectedQuotaBackedRoutesAllowed
+    );
     t.is(checkQuota.callCount, matrixCase.expectedQuotaCalls);
     if (matrixCase.expectedQuotaCalls) {
       Sinon.assert.calledWithExactly(checkQuota, 'user-1');
@@ -197,14 +191,14 @@ for (const matrixCase of byokCoverageCases) {
   });
 }
 
-test('CopilotAccessPolicy assertQuotaOrByok should honor quota-backed route disable', async t => {
+test('CopilotAccessPolicy assertQuotaOrByok should not block when quota-backed routes are disabled', async t => {
   const checkQuota = Sinon.stub().resolves(undefined);
   const access = new CopilotAccessPolicy(
     { checkQuota } as any,
     { getProfiles: Sinon.stub().resolves([]) } as any
   );
 
-  await t.throwsAsync(
+  await t.notThrowsAsync(
     access.assertQuotaOrByok({
       userId: 'user-1',
       workspaceId: 'workspace-1',

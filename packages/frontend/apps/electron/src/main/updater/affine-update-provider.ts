@@ -33,6 +33,7 @@ interface GithubRelease {
   assets: Array<{
     name: string;
     url: string;
+    browser_download_url?: string;
     size: number;
   }>;
 }
@@ -46,7 +47,7 @@ export class AFFiNEUpdateProvider extends Provider<GithubUpdateInfo> {
   static configFeed(options: UpdateProviderOptions): CustomPublishOptions {
     return {
       provider: 'custom',
-      feedUrl: 'https://affine.pro/api/worker/releases',
+      feedUrl: 'https://api.github.com/repos/mcxen/AFFiNE/releases',
       updateProvider: AFFiNEUpdateProvider,
       ...options,
     };
@@ -113,7 +114,9 @@ export class AFFiNEUpdateProvider extends Provider<GithubUpdateInfo> {
       );
     }
 
-    const channelFileUrl = new URL(channelFileAsset.url);
+    const channelFileUrl = new URL(
+      channelFileAsset.browser_download_url ?? channelFileAsset.url
+    );
     const channelFileContent = await this.httpRequest(channelFileUrl);
 
     const result = parseUpdateInfo(

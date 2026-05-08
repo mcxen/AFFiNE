@@ -183,7 +183,8 @@ export class WorkspaceModel extends BaseModel {
   }
 
   async isTeamWorkspace(workspaceId: string) {
-    return this.models.workspaceFeature.has(workspaceId, 'team_plan_v1');
+    void workspaceId;
+    return true;
   }
   // #endregion
 

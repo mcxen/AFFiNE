@@ -1,12 +1,11 @@
 import { notify } from '@affine/component';
-import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
 import { WorkspacePermissionService } from '@affine/core/modules/permissions';
 import { WorkspaceService } from '@affine/core/modules/workspace';
 import { useI18n } from '@affine/i18n';
 import type { BlobSyncState } from '@affine/nbstore';
 import { useLiveData, useService } from '@toeverything/infra';
 import { debounce } from 'lodash-es';
-import { useCallback, useEffect } from 'react';
+import { useEffect } from 'react';
 
 /**
  * TODO(eyhn): refactor this
@@ -20,14 +19,6 @@ export const OverCapacityNotification = () => {
     // revalidate permission
     permissionService.permission.revalidate();
   }, [permissionService]);
-
-  const workspaceDialogService = useService(WorkspaceDialogService);
-  const jumpToPricePlan = useCallback(() => {
-    workspaceDialogService.open('setting', {
-      activeTab: 'plans',
-      scrollAnchor: 'cloudPricingPlan',
-    });
-  }, [workspaceDialogService]);
 
   // debounce sync engine status
   useEffect(() => {
@@ -43,13 +34,6 @@ export const OverCapacityNotification = () => {
               title: t['com.affine.payment.storage-limit.new-title'](),
               message:
                 t['com.affine.payment.storage-limit.new-description.owner'](),
-              actions: [
-                {
-                  key: 'upgrade',
-                  label: t['com.affine.payment.upgrade'](),
-                  onClick: jumpToPricePlan,
-                },
-              ],
             });
           } else {
             notify.warning({
@@ -63,7 +47,7 @@ export const OverCapacityNotification = () => {
     return () => {
       disposableOverCapacity?.unsubscribe();
     };
-  }, [currentWorkspace, isOwner, jumpToPricePlan, t]);
+  }, [currentWorkspace, isOwner, t]);
 
   return null;
 };

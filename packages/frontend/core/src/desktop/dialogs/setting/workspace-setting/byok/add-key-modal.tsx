@@ -1,6 +1,8 @@
 import { Button, Modal, notify } from '@affine/component';
+import { UserFriendlyError } from '@affine/error';
 import {
   ByokKeyStorage,
+  ByokKeyTestStatus,
   ByokProvider,
   testWorkspaceByokConfigMutation as testByokMutation,
   upsertWorkspaceByokConfigMutation as upsertByokMutation,
@@ -56,11 +58,23 @@ export const AddKeyModal = ({
   const [endpoint, setEndpoint] = useState('');
   const [testResult, setTestResult] = useState<ByokTestResult | null>(null);
   const [testing, setTesting] = useState(false);
+  const normalizedName = name.trim();
+  const isEditingServerKey =
+    editingKey?.storage === ByokKeyStorage.server &&
+    storage === ByokKeyStorage.server;
+  const canSave =
+    !!normalizedName &&
+    (storage === ByokKeyStorage.local
+      ? !!apiKey
+      : isEditingServerKey || !!apiKey);
   const canTestStoredConfig =
     storage === ByokKeyStorage.server &&
     editingKey?.storage === ByokKeyStorage.server &&
     editingKey.provider === provider;
-  const canTest = !!apiKey || canTestStoredConfig;
+  const canTest =
+    storage === ByokKeyStorage.local
+      ? !!apiKey
+      : !!apiKey || canTestStoredConfig;
 
   useEffect(() => {
     if (!open) {
@@ -79,6 +93,14 @@ export const AddKeyModal = ({
   }, [canAddServerKey, editingKey, open]);
 
   const testKey = useCallback(async () => {
+    if (storage === ByokKeyStorage.local) {
+      setTestResult({
+        ok: true,
+        status: ByokKeyTestStatus.passed,
+        message: null,
+      });
+      return;
+    }
     if (!gql) {
       return;
     }
@@ -122,10 +144,23 @@ export const AddKeyModal = ({
     workspaceId,
   ]);
 
+  const errorMessage = useCallback(
+    (error: unknown) => {
+      const userFriendlyError = UserFriendlyError.fromAny(error);
+      if (
+        userFriendlyError.name === 'INTERNAL_SERVER_ERROR' ||
+        userFriendlyError.message === 'INTERNAL_SERVER_ERROR'
+      ) {
+        return byokT(t, 'notify.operation-failed.message');
+      }
+      return (
+        userFriendlyError.message || byokT(t, 'notify.operation-failed.message')
+      );
+    },
+    [t]
+  );
+
   const save = useCallback(async () => {
-    if (!testResult?.ok || !gql) {
-      return;
-    }
     if (storage === ByokKeyStorage.local) {
       const saved = await upsertLocalKey(workspaceId, {
         id:
@@ -151,7 +186,7 @@ export const AddKeyModal = ({
         return;
       }
       setLocalKeys(await readLocalKeys(workspaceId));
-    } else {
+    } else if (gql) {
       await gql({
         query: upsertByokMutation,
         variables: {
@@ -172,6 +207,8 @@ export const AddKeyModal = ({
         },
       });
       await onSaved();
+    } else {
+      return;
     }
     onOpenChange(false);
     setApiKey('');
@@ -190,7 +227,6 @@ export const AddKeyModal = ({
     setLocalKeys,
     storage,
     t,
-    testResult?.ok,
     workspaceId,
   ]);
 
@@ -314,7 +350,7 @@ export const AddKeyModal = ({
                 logByokError('Failed to test BYOK key', error);
                 notify.error({
                   title: byokT(t, 'notify.test-failed.title'),
-                  message: byokT(t, 'notify.operation-failed.message'),
+                  message: errorMessage(error),
                 });
               });
             }}
@@ -326,13 +362,13 @@ export const AddKeyModal = ({
           </Button>
           <Button
             variant="primary"
-            disabled={!testResult?.ok || !name}
+            disabled={!canSave}
             onClick={() => {
               save().catch(error => {
                 logByokError('Failed to save BYOK key', error);
                 notify.error({
                   title: byokT(t, 'notify.save-failed.title'),
-                  message: byokT(t, 'notify.operation-failed.message'),
+                  message: errorMessage(error),
                 });
               });
             }}

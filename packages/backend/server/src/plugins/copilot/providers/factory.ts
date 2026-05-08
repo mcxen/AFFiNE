@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 
-import { CopilotQuotaExceeded } from '../../../base';
 import { ServerFeature, ServerService } from '../../../core';
 import { type CopilotAccessContext, CopilotAccessPolicy } from '../access';
 import type { RequiredStructuredOutputContract } from '../runtime/contracts';
@@ -224,21 +223,6 @@ export class CopilotProviderFactory {
       this.logger.debug(
         `Copilot provider candidate found: ${route.provider.type} (${route.providerId})`
       );
-    }
-
-    if (
-      !resolved.length &&
-      !quotaBackedRoutesAvailable &&
-      context.quotaBackedRoutesAllowed !== false
-    ) {
-      const quotaBackedRoutes = await this.resolveRoutesFromRegistry(
-        quotaBackedRegistry,
-        cond,
-        filter
-      );
-      if (quotaBackedRoutes.length) {
-        throw new CopilotQuotaExceeded();
-      }
     }
 
     return resolved;

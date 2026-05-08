@@ -391,7 +391,7 @@ const FileCellComponent: ForwardRefRenderFunction<
   const workspaceDialogService = useService(WorkspaceDialogService);
   const jumpToPricePlan = useCallback(() => {
     workspaceDialogService.open('setting', {
-      activeTab: 'plans',
+      activeTab: 'appearance',
       scrollAnchor: 'cloudPricingPlan',
     });
   }, [workspaceDialogService]);

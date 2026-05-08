@@ -67,9 +67,6 @@ import { ChatSessionService } from '../../plugins/copilot/session';
 import { CopilotStorage } from '../../plugins/copilot/storage';
 import { CopilotTranscriptionService } from '../../plugins/copilot/transcript';
 import { CopilotWorkspaceService } from '../../plugins/copilot/workspace';
-import { PaymentModule } from '../../plugins/payment';
-import { SubscriptionService } from '../../plugins/payment/service';
-import { SubscriptionStatus } from '../../plugins/payment/types';
 import { installMockCopilotRuntime, MockCopilotProvider } from '../mocks';
 import { TestingPromptService } from '../mocks/prompt-service.mock';
 import { createTestingModule, TestingModule } from '../utils';
@@ -100,7 +97,6 @@ type Context = {
   storage: CopilotStorage;
   actionBridge: ActionRuntimeBridge;
   cronJobs: CopilotCronJobs;
-  subscription: SubscriptionService;
 };
 
 const buildTurn = (
@@ -148,7 +144,6 @@ test.before(async t => {
           },
         },
       }),
-      PaymentModule,
       QuotaModule,
       StorageModule,
       CopilotModule,
@@ -163,13 +158,6 @@ test.before(async t => {
       });
       builder.overrideProvider(PromptService).useClass(TestingPromptService);
       builder.overrideProvider(OpenAIProvider).useClass(MockCopilotProvider);
-      builder.overrideProvider(SubscriptionService).useClass(
-        class {
-          select() {
-            return { getSubscription: async () => undefined };
-          }
-        }
-      );
     },
   });
 
@@ -198,7 +186,6 @@ test.before(async t => {
   const transcript = module.get(CopilotTranscriptionService);
   const workspaceEmbedding = module.get(CopilotWorkspaceService);
   const cronJobs = module.get(CopilotCronJobs);
-  const subscription = module.get(SubscriptionService);
 
   t.context.module = module;
   t.context.auth = auth;
@@ -224,7 +211,6 @@ test.before(async t => {
   t.context.transcript = transcript;
   t.context.workspaceEmbedding = workspaceEmbedding;
   t.context.cronJobs = cronJobs;
-  t.context.subscription = subscription;
 
   await module.initTestingDB();
 });
@@ -2171,19 +2157,10 @@ test('model selection policy should resolve requested optional models consistent
   );
 });
 
-test('capability policy host should gate pro model requests by subscription status', async t => {
-  const { subscription, module } = t.context;
+test('capability policy host should allow optional model requests without subscription status', async t => {
+  const { module } = t.context;
   const capabilityPolicy = module.get(CapabilityPolicyHost);
 
-  const mockStatus = (status?: SubscriptionStatus) => {
-    Sinon.restore();
-    Sinon.stub(subscription, 'select').callsFake(() => ({
-      // @ts-expect-error mock
-      getSubscription: async () => (status ? { status } : null),
-    }));
-  };
-
-  // payment disabled -> allow requested if in optional; pro not blocked
   {
     const model1 = await capabilityPolicy.resolveChatModel({
       userId,
@@ -2195,7 +2172,6 @@ test('capability policy host should gate pro model requests by subscription stat
       ],
       proModels: ['gemini-2.5-pro', 'claude-sonnet-4-5@20250929'],
       requestedModelId: 'gemini-2.5-pro',
-      paymentEnabled: false,
     });
     t.snapshot(model1, 'should honor requested pro model');
 
@@ -2209,7 +2185,6 @@ test('capability policy host should gate pro model requests by subscription stat
       ],
       proModels: ['gemini-2.5-pro', 'claude-sonnet-4-5@20250929'],
       requestedModelId: 'openai-default/gemini-2.5-pro',
-      paymentEnabled: false,
     });
     t.is(
       model1WithPrefix,
@@ -2227,147 +2202,8 @@ test('capability policy host should gate pro model requests by subscription stat
       ],
       proModels: ['gemini-2.5-pro', 'claude-sonnet-4-5@20250929'],
       requestedModelId: 'not-in-optional',
-      paymentEnabled: false,
     });
     t.snapshot(model2, 'should fallback to default model');
-  }
-
-  // payment enabled + trialing: requesting pro should fallback to default
-  {
-    mockStatus(SubscriptionStatus.Trialing);
-    const model3 = await capabilityPolicy.resolveChatModel({
-      userId,
-      defaultModel: 'gemini-2.5-flash',
-      optionalModels: [
-        'gemini-2.5-flash',
-        'gemini-2.5-pro',
-        'claude-sonnet-4-5@20250929',
-      ],
-      proModels: ['gemini-2.5-pro', 'claude-sonnet-4-5@20250929'],
-      requestedModelId: 'gemini-2.5-pro',
-      paymentEnabled: true,
-    });
-    t.snapshot(
-      model3,
-      'should fallback to default model when requesting pro model during trialing'
-    );
-
-    const model3WithPrefix = await capabilityPolicy.resolveChatModel({
-      userId,
-      defaultModel: 'gemini-2.5-flash',
-      optionalModels: [
-        'gemini-2.5-flash',
-        'gemini-2.5-pro',
-        'claude-sonnet-4-5@20250929',
-      ],
-      proModels: ['gemini-2.5-pro', 'claude-sonnet-4-5@20250929'],
-      requestedModelId: 'openai-default/gemini-2.5-pro',
-      paymentEnabled: true,
-    });
-    t.is(
-      model3WithPrefix,
-      'gemini-2.5-flash',
-      'should fallback to default model when requesting prefixed pro model during trialing'
-    );
-
-    const model4 = await capabilityPolicy.resolveChatModel({
-      userId,
-      defaultModel: 'gemini-2.5-flash',
-      optionalModels: [
-        'gemini-2.5-flash',
-        'gemini-2.5-pro',
-        'claude-sonnet-4-5@20250929',
-      ],
-      proModels: ['gemini-2.5-pro', 'claude-sonnet-4-5@20250929'],
-      requestedModelId: 'gemini-2.5-flash',
-      paymentEnabled: true,
-    });
-    t.snapshot(model4, 'should honor requested non-pro model during trialing');
-
-    const model5 = await capabilityPolicy.resolveChatModel({
-      userId,
-      defaultModel: 'gemini-2.5-flash',
-      optionalModels: [
-        'gemini-2.5-flash',
-        'gemini-2.5-pro',
-        'claude-sonnet-4-5@20250929',
-      ],
-      proModels: ['gemini-2.5-pro', 'claude-sonnet-4-5@20250929'],
-      paymentEnabled: true,
-    });
-    t.snapshot(
-      model5,
-      'should pick default model when no requested model during trialing'
-    );
-  }
-
-  // payment enabled + active: without requested -> default model; requested pro should be honored
-  {
-    mockStatus(SubscriptionStatus.Active);
-    const model6 = await capabilityPolicy.resolveChatModel({
-      userId,
-      defaultModel: 'gemini-2.5-flash',
-      optionalModels: [
-        'gemini-2.5-flash',
-        'gemini-2.5-pro',
-        'claude-sonnet-4-5@20250929',
-      ],
-      proModels: ['gemini-2.5-pro', 'claude-sonnet-4-5@20250929'],
-      paymentEnabled: true,
-    });
-    t.snapshot(
-      model6,
-      'should pick default model when no requested model during active'
-    );
-
-    const model7 = await capabilityPolicy.resolveChatModel({
-      userId,
-      defaultModel: 'gemini-2.5-flash',
-      optionalModels: [
-        'gemini-2.5-flash',
-        'gemini-2.5-pro',
-        'claude-sonnet-4-5@20250929',
-      ],
-      proModels: ['gemini-2.5-pro', 'claude-sonnet-4-5@20250929'],
-      requestedModelId: 'claude-sonnet-4-5@20250929',
-      paymentEnabled: true,
-    });
-    t.snapshot(model7, 'should honor requested pro model during active');
-
-    const model7WithPrefix = await capabilityPolicy.resolveChatModel({
-      userId,
-      defaultModel: 'gemini-2.5-flash',
-      optionalModels: [
-        'gemini-2.5-flash',
-        'gemini-2.5-pro',
-        'claude-sonnet-4-5@20250929',
-      ],
-      proModels: ['gemini-2.5-pro', 'claude-sonnet-4-5@20250929'],
-      requestedModelId: 'openai-default/claude-sonnet-4-5@20250929',
-      paymentEnabled: true,
-    });
-    t.is(
-      model7WithPrefix,
-      'openai-default/claude-sonnet-4-5@20250929',
-      'should honor requested prefixed pro model during active'
-    );
-
-    const model8 = await capabilityPolicy.resolveChatModel({
-      userId,
-      defaultModel: 'gemini-2.5-flash',
-      optionalModels: [
-        'gemini-2.5-flash',
-        'gemini-2.5-pro',
-        'claude-sonnet-4-5@20250929',
-      ],
-      proModels: ['gemini-2.5-pro', 'claude-sonnet-4-5@20250929'],
-      requestedModelId: 'not-in-optional',
-      paymentEnabled: true,
-    });
-    t.snapshot(
-      model8,
-      'should fallback to default model when requesting non-optional model during active'
-    );
   }
 });
 

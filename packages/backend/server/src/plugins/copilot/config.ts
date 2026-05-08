@@ -216,7 +216,7 @@ declare global {
 defineModuleConfig('copilot', {
   enabled: {
     desc: 'Whether to enable the copilot plugin. <br> Document: <a href="https://docs.affine.pro/self-host-affine/administer/ai" target="_blank">https://docs.affine.pro/self-host-affine/administer/ai</a>',
-    default: false,
+    default: true,
   },
   'byok.enabled': {
     desc: 'Whether to enable workspace BYOK.',
@@ -230,7 +230,7 @@ defineModuleConfig('copilot', {
   },
   'byok.allowCustomEndpoint': {
     desc: 'Whether workspace BYOK custom endpoints are accepted.',
-    default: false,
+    default: true,
     shape: z.boolean(),
   },
   'providers.profiles': {

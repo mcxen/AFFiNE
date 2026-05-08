@@ -445,36 +445,6 @@
       "link": "https://developer.apple.com/documentation/sign_in_with_apple/sign_in_with_apple_js/implementing_sign_in_with_apple_in_your_app"
     }
   },
-  "payment": {
-    "enabled": {
-      "type": "Boolean",
-      "desc": "Whether enable payment plugin"
-    },
-    "showLifetimePrice": {
-      "type": "Boolean",
-      "desc": "Whether enable lifetime price and allow user to pay for it."
-    },
-    "apiKey": {
-      "type": "String",
-      "desc": "[Deprecated] Stripe API key. Use payment.stripe.apiKey instead.",
-      "env": "STRIPE_API_KEY"
-    },
-    "webhookKey": {
-      "type": "String",
-      "desc": "[Deprecated] Stripe webhook key. Use payment.stripe.webhookKey instead.",
-      "env": "STRIPE_WEBHOOK_KEY"
-    },
-    "stripe": {
-      "type": "Object",
-      "desc": "Stripe sdk options and credentials",
-      "link": "https://docs.stripe.com/api"
-    },
-    "revenuecat": {
-      "type": "Object",
-      "desc": "RevenueCat integration configs",
-      "link": "https://www.revenuecat.com/docs/"
-    }
-  },
   "worker": {
     "allowedOrigin": {
       "type": "Array",

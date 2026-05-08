@@ -111,7 +111,7 @@ export class ByokService {
   ) {}
 
   get customEndpointSupported() {
-    return env.selfhosted;
+    return true;
   }
 
   async getSettings(
@@ -143,10 +143,10 @@ export class ByokService {
         entitled: false,
         serverEntitled: false,
         localEntitled: false,
-        entitlementRequired: ['Pro', 'Team', 'Believer'],
+        entitlementRequired: [],
         keys: [],
         allowedProviders: [...BYOK_ALLOWED_PROVIDERS],
-        localStorageSupported: false,
+        localStorageSupported: true,
         customEndpointSupported: this.customEndpointSupported,
         hasAiPlan: await this.entitlement.hasAiPlan(userId),
         warnings: [],
@@ -163,10 +163,10 @@ export class ByokService {
       entitled: true,
       serverEntitled,
       localEntitled,
-      entitlementRequired: ['Pro', 'Team', 'Believer'],
+      entitlementRequired: [],
       keys,
       allowedProviders: [...BYOK_ALLOWED_PROVIDERS],
-      localStorageSupported: false,
+      localStorageSupported: true,
       customEndpointSupported: this.customEndpointSupported,
       hasAiPlan: await this.entitlement.hasAiPlan(userId),
       warnings: this.buildWarnings(keys),
@@ -593,6 +593,10 @@ export class ByokService {
     const apiKey = this.crypto.decrypt(encryptedApiKey);
     switch (provider) {
       case ByokProvider.openai:
+        return {
+          apiKey,
+          ...(endpoint ? { baseURL: endpoint, oldApiStyle: true } : {}),
+        };
       case ByokProvider.gemini:
       case ByokProvider.anthropic:
         return { apiKey, ...(endpoint ? { baseURL: endpoint } : {}) };
@@ -715,13 +719,12 @@ export class ByokService {
       {
         featureKind: 'transcript',
         reason:
-          'Transcript and workspace indexing require a server Gemini BYOK key or AFFiNE AI plan fallback.',
+          'Transcript and workspace indexing require a server Gemini BYOK key.',
         requiredProviders: [ByokProvider.gemini],
       },
       {
         featureKind: 'workspace_indexing',
-        reason:
-          'Workspace indexing requires a server Gemini BYOK key or AFFiNE AI plan fallback.',
+        reason: 'Workspace indexing requires a server Gemini BYOK key.',
         requiredProviders: [ByokProvider.gemini],
       },
     ];

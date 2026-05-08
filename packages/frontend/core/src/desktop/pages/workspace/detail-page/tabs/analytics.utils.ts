@@ -21,20 +21,7 @@ export function getAvailableAnalyticsWindowOptions() {
   return [...ANALYTICS_WINDOW_OPTIONS];
 }
 
-export function isLockedAnalyticsWindowOption(
-  value: number,
-  isTeamWorkspace: boolean
-) {
-  return !isTeamWorkspace && value > NON_TEAM_ANALYTICS_WINDOW_DAYS;
-}
-
-export function clampAnalyticsWindowDays(
-  value: number,
-  isTeamWorkspace: boolean
-) {
-  if (!isTeamWorkspace) {
-    return NON_TEAM_ANALYTICS_WINDOW_DAYS;
-  }
+export function clampAnalyticsWindowDays(value: number) {
   return ANALYTICS_WINDOW_OPTIONS.includes(
     value as (typeof ANALYTICS_WINDOW_OPTIONS)[number]
   )

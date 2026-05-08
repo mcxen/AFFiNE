@@ -595,79 +595,6 @@ export const USER_FRIENDLY_ERRORS = {
     message: ({ spaceId }) => `No more seat available in the Space ${spaceId}.`,
   },
 
-  // Subscription Errors
-  unsupported_subscription_plan: {
-    type: 'invalid_input',
-    args: { plan: 'string' },
-    message: ({ plan }) => `Unsupported subscription plan: ${plan}.`,
-  },
-  failed_to_checkout: {
-    type: 'internal_server_error',
-    message: 'Failed to create checkout session.',
-  },
-  invalid_checkout_parameters: {
-    type: 'invalid_input',
-    message: 'Invalid checkout parameters provided.',
-  },
-  subscription_already_exists: {
-    type: 'resource_already_exists',
-    args: { plan: 'string' },
-    message: ({ plan }) => `You have already subscribed to the ${plan} plan.`,
-  },
-  invalid_subscription_parameters: {
-    type: 'invalid_input',
-    message: 'Invalid subscription parameters provided.',
-  },
-  subscription_not_exists: {
-    type: 'resource_not_found',
-    args: { plan: 'string' },
-    message: ({ plan }) => `You didn't subscribe to the ${plan} plan.`,
-  },
-  subscription_has_been_canceled: {
-    type: 'action_forbidden',
-    message: 'Your subscription has already been canceled.',
-  },
-  subscription_has_not_been_canceled: {
-    type: 'action_forbidden',
-    message: 'Your subscription has not been canceled.',
-  },
-  subscription_expired: {
-    type: 'action_forbidden',
-    message: 'Your subscription has expired.',
-  },
-  same_subscription_recurring: {
-    type: 'bad_request',
-    args: { recurring: 'string' },
-    message: ({ recurring }) =>
-      `Your subscription has already been in ${recurring} recurring state.`,
-  },
-  customer_portal_create_failed: {
-    type: 'internal_server_error',
-    message: 'Failed to create customer portal session.',
-  },
-  subscription_plan_not_found: {
-    type: 'resource_not_found',
-    args: { plan: 'string', recurring: 'string' },
-    message: 'You are trying to access a unknown subscription plan.',
-  },
-  cant_update_onetime_payment_subscription: {
-    type: 'action_forbidden',
-    message: 'You cannot update an onetime payment subscription.',
-  },
-  workspace_id_required_for_team_subscription: {
-    type: 'invalid_input',
-    message: 'A workspace is required to checkout for team subscription.',
-  },
-  workspace_id_required_to_update_team_subscription: {
-    type: 'invalid_input',
-    message: 'Workspace id is required to update team subscription.',
-  },
-  managed_by_app_store_or_play: {
-    type: 'action_forbidden',
-    message:
-      'This subscription is managed by App Store or Google Play. Please manage it in the corresponding store.',
-  },
-
   // Calendar errors
   calendar_provider_request_error: {
     type: 'internal_server_error',
@@ -872,7 +799,7 @@ export const USER_FRIENDLY_ERRORS = {
   license_revealed: {
     type: 'action_forbidden',
     message:
-      'License key has been revealed. Please check your mail box of the one provided during checkout.',
+      'License key has been revealed. Please check the mailbox used for the license request.',
   },
   workspace_license_already_exists: {
     type: 'action_forbidden',

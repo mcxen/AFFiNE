@@ -4,7 +4,6 @@ import { type ConnectedAccount, Prisma, type User } from '@prisma/client';
 import { omit } from 'lodash-es';
 
 import {
-  CannotDeleteAccountWithOwnedTeamWorkspace,
   CryptoHelper,
   EmailAlreadyUsed,
   EventBus,
@@ -273,17 +272,6 @@ export class UserModel extends BaseModel {
 
   async delete(id: string) {
     const ownedWorkspaces = await this.ownedWorkspaces(id);
-
-    for (const ws of ownedWorkspaces) {
-      const isTeamWorkspace = await this.models.workspace.isTeamWorkspace(
-        ws.workspaceId
-      );
-
-      if (isTeamWorkspace) {
-        throw new CannotDeleteAccountWithOwnedTeamWorkspace();
-      }
-    }
-
     const user = await this.db.user.delete({ where: { id } });
 
     this.event.emit('user.deleted', {

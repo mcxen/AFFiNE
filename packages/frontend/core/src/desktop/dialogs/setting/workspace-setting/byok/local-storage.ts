@@ -1,6 +1,7 @@
 import { apis } from '@affine/electron-api';
 import { ByokKeyStorage, ByokKeyTestStatus } from '@affine/graphql';
 
+import { logByokError } from './errors';
 import { capabilitiesFor } from './metadata';
 import type { ByokKey, LocalByokKeyInput, LocalByokPublicKey } from './types';
 
@@ -15,7 +16,8 @@ export async function localByokStorageSupported() {
   }
   try {
     return await storage.isSupported();
-  } catch {
+  } catch (e) {
+    logByokError('Failed to check local storage support', e);
     return false;
   }
 }
@@ -30,7 +32,7 @@ function toLocalByokKey(key: LocalByokPublicKey): ByokKey {
     configured: key.configured ?? true,
     enabled: key.enabled ?? true,
     endpoint: key.endpoint ?? null,
-    endpointEditable: key.endpointEditable ?? false,
+    endpointEditable: key.endpointEditable ?? true,
     sortOrder: key.sortOrder ?? 0,
     capabilities: capabilitiesFor(key.provider, ByokKeyStorage.local),
     testStatus: key.testStatus ?? ByokKeyTestStatus.passed,
@@ -47,7 +49,8 @@ export async function readLocalKeys(workspaceId: string): Promise<ByokKey[]> {
       workspaceId
     )) as LocalByokPublicKey[];
     return keys.map(toLocalByokKey);
-  } catch {
+  } catch (e) {
+    logByokError('Failed to read local BYOK keys', e);
     return [];
   }
 }
@@ -62,7 +65,8 @@ export async function upsertLocalKey(
   }
   try {
     return await storage.upsertWorkspaceKey(workspaceId, key);
-  } catch {
+  } catch (e) {
+    logByokError('Failed to upsert local BYOK key', e);
     return null;
   }
 }
@@ -74,7 +78,8 @@ export async function deleteLocalKey(workspaceId: string, keyId: string) {
   }
   try {
     return await storage.deleteWorkspaceKey(workspaceId, keyId);
-  } catch {
+  } catch (e) {
+    logByokError('Failed to delete local BYOK key', e);
     return false;
   }
 }
@@ -90,7 +95,8 @@ export async function reorderLocalKeys(workspaceId: string, ids: string[]) {
       ids
     )) as LocalByokPublicKey[];
     return keys.map(toLocalByokKey);
-  } catch {
+  } catch (e) {
+    logByokError('Failed to reorder local BYOK keys', e);
     return [];
   }
 }
@@ -102,7 +108,8 @@ export async function clearLocalKeys(workspaceId: string) {
   }
   try {
     return await storage.clearWorkspaceKeys(workspaceId);
-  } catch {
+  } catch (e) {
+    logByokError('Failed to clear local BYOK keys', e);
     return false;
   }
 }

@@ -41,7 +41,6 @@ export type ActionEventType =
   | 'started'
   | 'finished'
   | 'error'
-  | 'aborted:paywall'
   | 'aborted:login-required'
   | 'aborted:server-error'
   | 'aborted:stop'
@@ -143,7 +142,6 @@ export class AIProvider {
       mode: 'page' | 'edgeless';
     }>(),
     requestLogin: new Subject<{ host?: EditorHost | null }>(),
-    requestUpgradePlan: new Subject<{ host?: EditorHost | null }>(),
     // stream of AI actions triggered by users
     actions: new Subject<{
       action: keyof BlockSuitePresets.AIActions;
@@ -220,12 +218,6 @@ export class AIProvider {
                   options,
                   event: 'aborted:timeout',
                 });
-              } else if (err instanceof PaymentRequiredError) {
-                slots.actions.next({
-                  action: id,
-                  options,
-                  event: 'aborted:paywall',
-                });
               } else if (err instanceof UnauthorizedError) {
                 slots.actions.next({
                   action: id,
@@ -268,13 +260,7 @@ export class AIProvider {
               options,
               event: 'error',
             });
-            if (err instanceof PaymentRequiredError) {
-              slots.actions.next({
-                action: id,
-                options,
-                event: 'aborted:paywall',
-              });
-            } else {
+            if (!(err instanceof PaymentRequiredError)) {
               captureException(err, {
                 user: { id: user?.id },
                 extra: {

@@ -1,16 +1,7 @@
-import { MenuItem, MenuSeparator, MenuSub } from '@affine/component';
-import { FeatureFlagService } from '@affine/core/modules/feature-flag';
+import { MenuItem, MenuSub } from '@affine/component';
 import { useI18n } from '@affine/i18n';
 import { track } from '@affine/track';
-import {
-  ExportIcon,
-  ExportToHtmlIcon,
-  ExportToMarkdownIcon,
-  ExportToPngIcon,
-  PageIcon,
-  PrinterIcon,
-} from '@blocksuite/icons/rc';
-import { useLiveData, useService } from '@toeverything/infra';
+import { ExportIcon, ExportToMarkdownIcon } from '@blocksuite/icons/rc';
 import type { ReactNode } from 'react';
 import { useCallback } from 'react';
 
@@ -31,6 +22,8 @@ interface ExportProps {
       | 'html'
       | 'png'
       | 'markdown'
+      | 'markdown-all-docs'
+      | 'markdown-with-linked-docs'
       | 'copy-markdown'
       | 'snapshot'
       | 'pdf-export'
@@ -59,51 +52,14 @@ export function ExportMenuItem<T>({
   );
 }
 
-export const PrintMenuItems = ({
-  exportHandler,
-  className = transitionStyle,
-}: ExportProps) => {
-  const t = useI18n();
-  return (
-    <ExportMenuItem
-      onSelect={() => exportHandler('pdf')}
-      className={className}
-      type="pdf"
-      icon={<PrinterIcon />}
-      label={t['com.affine.export.print']()}
-    />
-  );
-};
-
 export const ExportMenuItems = ({
   exportHandler,
   className = transitionStyle,
-  pageMode = 'page',
 }: ExportProps) => {
   const t = useI18n();
-  const featureFlags = useService(FeatureFlagService).flags;
-  const enable_pdfmake_export = useLiveData(
-    featureFlags.enable_pdfmake_export.$
-  );
 
   return (
     <>
-      <ExportMenuItem
-        onSelect={() => exportHandler('html')}
-        className={className}
-        type="html"
-        icon={<ExportToHtmlIcon />}
-        label={t['Export to HTML']()}
-      />
-      {pageMode !== 'edgeless' && (
-        <ExportMenuItem
-          onSelect={() => exportHandler('png')}
-          className={className}
-          type="png"
-          icon={<ExportToPngIcon />}
-          label={t['Export to PNG']()}
-        />
-      )}
       <ExportMenuItem
         onSelect={() => exportHandler('markdown')}
         className={className}
@@ -112,48 +68,27 @@ export const ExportMenuItems = ({
         label={t['Export to Markdown']()}
       />
       <ExportMenuItem
-        onSelect={() => exportHandler('copy-markdown')}
+        onSelect={() => exportHandler('markdown-with-linked-docs')}
         className={className}
-        type="copy-markdown"
+        type="markdown-with-linked-docs"
         icon={<ExportToMarkdownIcon />}
-        label={t['com.affine.export.copy-markdown']()}
+        label="Export Markdown with child docs"
       />
-      {pageMode !== 'edgeless' && enable_pdfmake_export && (
-        <ExportMenuItem
-          onSelect={() => exportHandler('pdf-export')}
-          className={className}
-          type="pdf-export"
-          icon={<PrinterIcon />}
-          label={t['Export to PDF']()}
-        />
-      )}
       <ExportMenuItem
-        onSelect={() => exportHandler('snapshot')}
+        onSelect={() => exportHandler('markdown-all-docs')}
         className={className}
-        type="snapshot"
-        icon={<PageIcon />}
-        label={t['Export to Snapshot']()}
+        type="markdown-all-docs"
+        icon={<ExportToMarkdownIcon />}
+        label="Export all Markdown"
       />
     </>
   );
 };
 
-export const Export = ({ exportHandler, className, pageMode }: ExportProps) => {
+export const Export = ({ exportHandler, className }: ExportProps) => {
   const t = useI18n();
   const items = (
-    <>
-      <ExportMenuItems
-        exportHandler={exportHandler}
-        className={className}
-        pageMode={pageMode}
-      />
-      {pageMode !== 'edgeless' && (
-        <>
-          <MenuSeparator />
-          <PrintMenuItems exportHandler={exportHandler} className={className} />
-        </>
-      )}
-    </>
+    <ExportMenuItems exportHandler={exportHandler} className={className} />
   );
   const handleExportMenuOpenChange = useCallback((open: boolean) => {
     if (open) {

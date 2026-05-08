@@ -1,6 +1,5 @@
 import type { AIToolsConfig } from '@affine/core/modules/ai-button';
 import { apis, type ClientHandler } from '@affine/electron-api';
-import { UserFriendlyError } from '@affine/error';
 import {
   ByokProvider,
   createWorkspaceByokLocalLeaseMutation,
@@ -83,22 +82,30 @@ async function createWorkspaceByokLocalLease(
     });
     if (!leaseProviders.length) return undefined;
 
-    const result = await client.gql({
-      query: createWorkspaceByokLocalLeaseMutation,
-      variables: {
-        input: {
-          workspaceId,
-          providers: leaseProviders,
+    try {
+      const result = await client.gql({
+        query: createWorkspaceByokLocalLeaseMutation,
+        variables: {
+          input: {
+            workspaceId,
+            providers: leaseProviders,
+          },
         },
-      },
-    });
-    return result.createWorkspaceByokLocalLease.leaseId;
+      });
+      return result.createWorkspaceByokLocalLease.leaseId;
+    } catch (error) {
+      console.warn(
+        'Failed to create workspace BYOK local lease',
+        errorMetadata(error)
+      );
+      return undefined;
+    }
   } catch (error) {
     console.warn(
       'Failed to create workspace BYOK local lease',
       errorMetadata(error)
     );
-    throw UserFriendlyError.fromAny(error);
+    return undefined;
   }
 }
 

@@ -16,7 +16,6 @@ import { getViewManager } from '@affine/core/blocksuite/manager/view';
 import { NotificationServiceImpl } from '@affine/core/blocksuite/view-extensions/editor-view/notification-service';
 import { useAIChatConfig } from '@affine/core/components/hooks/affine/use-ai-chat-config';
 import { useAISpecs } from '@affine/core/components/hooks/affine/use-ai-specs';
-import { useAISubscribe } from '@affine/core/components/hooks/affine/use-ai-subscribe';
 import {
   AIDraftService,
   AIToolsConfigService,
@@ -26,7 +25,6 @@ import {
   EventSourceService,
   GraphQLService,
   ServerService,
-  SubscriptionService,
 } from '@affine/core/modules/cloud';
 import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
 import { FeatureFlagService } from '@affine/core/modules/feature-flag';
@@ -281,7 +279,6 @@ export const Component = () => {
   );
   const specs = useAISpecs();
   const mockStd = useMockStd();
-  const handleAISubscribe = useAISubscribe();
 
   const deleteSession = useMemo(
     () =>
@@ -341,9 +338,7 @@ export const Component = () => {
     content.aiDraftService = framework.get(AIDraftService);
     content.aiToolsConfigService = framework.get(AIToolsConfigService);
     content.serverService = framework.get(ServerService);
-    content.subscriptionService = framework.get(SubscriptionService);
     content.aiModelService = framework.get(AIModelService);
-    content.onAISubscribe = handleAISubscribe;
 
     content.createSession = createSession;
     content.onOpenDoc = onOpenDoc;
@@ -370,7 +365,6 @@ export const Component = () => {
     notificationService,
     specs,
     onOpenDoc,
-    handleAISubscribe,
   ]);
 
   // init or update header ai-chat-toolbar

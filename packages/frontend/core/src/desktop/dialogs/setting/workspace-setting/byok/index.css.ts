@@ -222,6 +222,14 @@ export const modalActions = style({
   marginTop: 8,
 });
 
+export const modelForm = style({
+  display: 'grid',
+  gridTemplateColumns: '1fr auto',
+  alignItems: 'center',
+  gap: 12,
+  padding: '12px 16px',
+});
+
 export const testStatus = style({
   marginRight: 'auto',
   fontSize: cssVar('fontXs'),

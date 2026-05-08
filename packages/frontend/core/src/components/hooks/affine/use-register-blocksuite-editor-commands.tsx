@@ -290,6 +290,23 @@ export function useRegisterBlocksuiteEditorCommands(
 
     unsubs.push(
       registerAffineCommand({
+        id: `editor:${mode}-export-to-markdown-with-linked-docs`,
+        preconditionStrategy,
+        category: `editor:${mode}`,
+        icon: mode === 'page' ? <PageIcon /> : <EdgelessIcon />,
+        label: 'Export Markdown with child docs',
+        async run() {
+          track.$.cmdk.editor.export({
+            type: 'markdown-with-linked-docs',
+          });
+
+          exportHandler('markdown-with-linked-docs');
+        },
+      })
+    );
+
+    unsubs.push(
+      registerAffineCommand({
         id: `editor:${mode}-export-to-snapshot`,
         preconditionStrategy,
         category: `editor:${mode}`,

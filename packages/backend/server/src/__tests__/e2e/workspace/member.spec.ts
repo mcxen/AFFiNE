@@ -14,12 +14,9 @@ import {
 } from '@affine/graphql';
 import { faker } from '@faker-js/faker';
 
+import { WorkspacePolicyService } from '../../../core/permission';
 import { Models } from '../../../models';
 import { FeatureConfigs } from '../../../models/common/feature';
-import {
-  SubscriptionPlan,
-  SubscriptionRecurring,
-} from '../../../plugins/payment/types';
 import { Mockers } from '../../mocks';
 import { app, e2e } from '../test';
 
@@ -183,11 +180,9 @@ e2e.serial(
       uploadId: null,
     });
 
-    await app.eventBus.emitAsync('user.subscription.canceled', {
-      userId: owner.id,
-      plan: SubscriptionPlan.Pro,
-      recurring: SubscriptionRecurring.Lifetime,
-    });
+    await app
+      .get(WorkspacePolicyService)
+      .reconcileWorkspaceQuotaState(workspace.id);
 
     t.true(
       await app.models.workspaceFeature.has(

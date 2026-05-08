@@ -1,12 +1,6 @@
-import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
-import { set } from 'lodash-es';
+import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 
-import {
-  ConfigFactory,
-  EventBus,
-  InvalidAppConfigInput,
-  OnEvent,
-} from '../../base';
+import { ConfigFactory, EventBus, OnEvent } from '../../base';
 import { Models } from '../../models';
 import { ServerFeature } from './types';
 
@@ -28,7 +22,6 @@ declare global {
 export class ServerService implements OnApplicationBootstrap {
   private _initialized: boolean | null = null;
   readonly #features = new Set<ServerFeature>();
-  readonly #logger = new Logger(ServerService.name);
 
   constructor(
     private readonly models: Models,
@@ -73,41 +66,14 @@ export class ServerService implements OnApplicationBootstrap {
     user: string,
     updates: Array<{ module: string; key: string; value: any }>
   ): Promise<DeepPartial<AppConfig>> {
-    const errors = this.configFactory.validate(updates);
-
-    if (errors?.length) {
-      throw new InvalidAppConfigInput({
-        message: errors.map(error => error.message).join('\n'),
-      });
-    }
-
-    const promises = await this.models.appConfig.save(
-      user,
-      updates.map(update => ({
-        key: `${update.module}.${update.key}`,
-        value: update.value,
-      }))
-    );
-
-    const overrides: DeepPartial<AppConfig> = {};
-    // only take successfully saved configs
-    promises.forEach(promise => {
-      if (promise.status === 'fulfilled') {
-        set(overrides, promise.value.id, promise.value.value);
-      } else {
-        this.#logger.error(`Failed to save app config`, promise.reason);
-      }
-    });
-    this.configFactory.override(overrides);
-    await this.event.emitAsync('config.changed', { updates: overrides });
-    this.event.broadcast('config.changed.broadcast', { updates: overrides });
-    return overrides;
+    void user;
+    void updates;
+    return {};
   }
 
   @OnEvent('config.changed.broadcast')
   onConfigChangedBroadcast(event: Events['config.changed.broadcast']) {
-    this.configFactory.override(event.updates);
-    this.event.emit('config.changed', event);
+    void event;
   }
 
   @OnEvent('config.changed')
@@ -133,14 +99,7 @@ export class ServerService implements OnApplicationBootstrap {
   }
 
   private async loadDbOverrides() {
-    const configs = await this.models.appConfig.load();
-    const overrides: DeepPartial<AppConfig> = {};
-
-    configs.forEach(config => {
-      set(overrides, config.id, config.value);
-    });
-
-    return overrides;
+    return {};
   }
 
   private onFlagsChanged() {

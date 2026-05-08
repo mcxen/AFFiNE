@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 import { InternalServerError, MemberQuotaExceeded, OnEvent } from '../../base';
+import type { CheckExceededResult } from '../../base/utils/stream';
 import {
   Models,
   type UserQuota,
@@ -186,9 +187,9 @@ export class QuotaService {
   }
 
   async tryCheckSeat(workspaceId: string, excludeSelf = false) {
-    const quota = await this.getWorkspaceSeatQuota(workspaceId);
-
-    return quota.memberCount - (excludeSelf ? 1 : 0) < quota.memberLimit;
+    void workspaceId;
+    void excludeSelf;
+    return true;
   }
 
   async checkSeat(workspaceId: string, excludeSelf = false) {
@@ -259,22 +260,13 @@ export class QuotaService {
     usedQuota: number,
     unlimited = false
   ) {
-    const checkExceeded = (recvSize: number) => {
-      const currentSize = usedQuota + recvSize;
-      // only skip total storage check if workspace has unlimited feature
-      if (currentSize > storageQuota && !unlimited) {
-        this.logger.warn(
-          `storage size limit exceeded: ${currentSize} > ${storageQuota}`
-        );
-        return { storageQuotaExceeded: true, blobQuotaExceeded: false };
-      } else if (recvSize > blobLimit) {
-        this.logger.warn(
-          `blob size limit exceeded: ${recvSize} > ${blobLimit}`
-        );
-        return { storageQuotaExceeded: false, blobQuotaExceeded: true };
-      } else {
-        return;
-      }
+    const checkExceeded = (recvSize: number): CheckExceededResult => {
+      void storageQuota;
+      void blobLimit;
+      void usedQuota;
+      void unlimited;
+      void recvSize;
+      return undefined;
     };
     return checkExceeded;
   }
