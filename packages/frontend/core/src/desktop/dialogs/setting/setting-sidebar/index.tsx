@@ -90,6 +90,39 @@ export const SignInButton = () => {
   );
 };
 
+export const AddSelfhostedServerButton = () => {
+  const t = useI18n();
+  const globalDialogService = useService(GlobalDialogService);
+
+  return (
+    <div
+      className={style.accountButton}
+      onClick={useCallback(() => {
+        globalDialogService.open('sign-in', { step: 'addSelfhosted' });
+      }, [globalDialogService])}
+    >
+      <div className="avatar not-sign">
+        <Logo1Icon />
+      </div>
+
+      <div className="content">
+        <div
+          className="name"
+          title={t['com.affine.auth.sign.add-selfhosted']()}
+        >
+          {t['com.affine.auth.sign.add-selfhosted']()}
+        </div>
+        <div
+          className="email"
+          title={t['com.affine.auth.sign.add-selfhosted.connect-button']()}
+        >
+          {t['com.affine.auth.sign.add-selfhosted.connect-button']()}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 type SettingSidebarItemProps = {
   isActive: boolean;
   icon: ReactNode;
@@ -208,6 +241,7 @@ export const SettingSidebar = ({
           />
         </Suspense>
       ) : null}
+      <AddSelfhostedServerButton />
 
       <Scrollable.Root>
         <Scrollable.Viewport>

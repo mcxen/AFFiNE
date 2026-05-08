@@ -57,6 +57,14 @@ export const AddKeyModal = ({
   const [endpoint, setEndpoint] = useState('');
   const [testResult, setTestResult] = useState<ByokTestResult | null>(null);
   const [testing, setTesting] = useState(false);
+  const isEditingServerKey =
+    editingKey?.storage === ByokKeyStorage.server &&
+    storage === ByokKeyStorage.server;
+  const canSave =
+    !!name &&
+    (storage === ByokKeyStorage.local
+      ? !!apiKey
+      : isEditingServerKey || !!apiKey);
   const canTestStoredConfig =
     storage === ByokKeyStorage.server &&
     editingKey?.storage === ByokKeyStorage.server &&
@@ -135,9 +143,6 @@ export const AddKeyModal = ({
   ]);
 
   const save = useCallback(async () => {
-    if (!testResult?.ok) {
-      return;
-    }
     if (storage === ByokKeyStorage.local) {
       const saved = await upsertLocalKey(workspaceId, {
         id:
@@ -204,7 +209,6 @@ export const AddKeyModal = ({
     setLocalKeys,
     storage,
     t,
-    testResult?.ok,
     workspaceId,
   ]);
 
@@ -326,9 +330,13 @@ export const AddKeyModal = ({
             onClick={() => {
               testKey().catch(error => {
                 logByokError('Failed to test BYOK key', error);
+                const message =
+                  error instanceof Error
+                    ? error.message
+                    : byokT(t, 'notify.operation-failed.message');
                 notify.error({
                   title: byokT(t, 'notify.test-failed.title'),
-                  message: byokT(t, 'notify.operation-failed.message'),
+                  message,
                 });
               });
             }}
@@ -340,13 +348,17 @@ export const AddKeyModal = ({
           </Button>
           <Button
             variant="primary"
-            disabled={!testResult?.ok || !name}
+            disabled={!canSave}
             onClick={() => {
               save().catch(error => {
                 logByokError('Failed to save BYOK key', error);
+                const message =
+                  error instanceof Error
+                    ? error.message
+                    : byokT(t, 'notify.operation-failed.message');
                 notify.error({
                   title: byokT(t, 'notify.save-failed.title'),
-                  message: byokT(t, 'notify.operation-failed.message'),
+                  message,
                 });
               });
             }}

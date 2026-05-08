@@ -40,6 +40,7 @@ type ExportType =
   | 'html'
   | 'png'
   | 'markdown'
+  | 'markdown-all-docs'
   | 'markdown-with-linked-docs'
   | 'copy-markdown'
   | 'snapshot'
@@ -404,8 +405,7 @@ async function exportToMarkdownWithLinkedDocs(
   ];
   const assets = transformer.assets ?? new Map<string, Blob>();
   if (
-    BUILD_CONFIG.isElectron &&
-    (await writeMarkdownExportToFolder(exportedDocs, assets, allAssetsIds, doc))
+    await writeMarkdownExportToFolder(exportedDocs, assets, allAssetsIds, doc)
   ) {
     return;
   }
@@ -427,6 +427,78 @@ async function exportToMarkdownWithLinkedDocs(
 
   const docTitle = doc.meta?.title || 'Untitled';
   download(await zip.generate(), `${docTitle}.zip`);
+}
+
+async function exportAllDocsToMarkdown(
+  doc: Store,
+  docsService: DocsService,
+  std?: BlockStdScope
+) {
+  if (!std) {
+    await exportToMarkdown(doc, std);
+    return;
+  }
+
+  const transformer = createTransformer(doc);
+  const adapterFactory = std.store.provider.get(
+    MarkdownAdapterFactoryIdentifier
+  );
+  const adapter = adapterFactory.get(transformer);
+  const docs = docsService.list.docs$.value
+    .filter(docRecord => !docRecord.trash$.value)
+    .map(docRecord =>
+      doc.workspace.getDoc(docRecord.id)?.getStore({ id: docRecord.id })
+    )
+    .filter((store): store is Store => !!store);
+  const exportedDocs: ExportedMarkdownDoc[] = [];
+
+  for (const targetDoc of docs) {
+    const loaded = docsService.open(targetDoc.id);
+    const disposePriorityLoad = loaded.doc.addPriorityLoad(10);
+    try {
+      await loaded.doc.waitForSyncReady();
+      const result = (await adapter.fromDoc(targetDoc)) as AdapterResult;
+      if (!result) {
+        continue;
+      }
+      exportedDocs.push({
+        doc: targetDoc,
+        markdown: result.file ?? '',
+        assetsIds: result.assetsIds,
+      });
+    } finally {
+      disposePriorityLoad();
+      loaded.release();
+    }
+  }
+
+  if (exportedDocs.length === 0) {
+    return;
+  }
+
+  const allAssetsIds = [
+    ...new Set(exportedDocs.flatMap(exportedDoc => exportedDoc.assetsIds)),
+  ];
+  const assets = transformer.assets ?? new Map<string, Blob>();
+  if (
+    await writeMarkdownExportToFolder(exportedDocs, assets, allAssetsIds, doc)
+  ) {
+    return;
+  }
+
+  const zip = await createAssetsArchive(assets, allAssetsIds);
+  const usedPaths = new Set<string>();
+
+  for (const exportedDoc of exportedDocs) {
+    const path = uniqueMarkdownPath(exportedDoc.doc, usedPaths, false);
+    await zip.file(
+      path,
+      new Blob([exportedDoc.markdown], { type: 'text/plain' })
+    );
+  }
+
+  const docTitle = doc.meta?.title || 'workspace';
+  download(await zip.generate(), `${docTitle}-all-docs.zip`);
 }
 
 async function exportToHtml(doc: Store, std?: BlockStdScope) {
@@ -498,6 +570,9 @@ async function exportHandler({
       return true;
     case 'markdown':
       await exportToMarkdown(page, editorRoot?.std);
+      return true;
+    case 'markdown-all-docs':
+      await exportAllDocsToMarkdown(page, docsService, editorRoot?.std);
       return true;
     case 'markdown-with-linked-docs':
       await exportToMarkdownWithLinkedDocs(page, docsService, editorRoot?.std);
