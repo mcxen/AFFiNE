@@ -1,6 +1,7 @@
 import { Button, Modal, notify } from '@affine/component';
 import {
   ByokKeyStorage,
+  ByokKeyTestStatus,
   ByokProvider,
   testWorkspaceByokConfigMutation as testByokMutation,
   upsertWorkspaceByokConfigMutation as upsertByokMutation,
@@ -60,7 +61,10 @@ export const AddKeyModal = ({
     storage === ByokKeyStorage.server &&
     editingKey?.storage === ByokKeyStorage.server &&
     editingKey.provider === provider;
-  const canTest = !!apiKey || canTestStoredConfig;
+  const canTest =
+    storage === ByokKeyStorage.local
+      ? !!apiKey
+      : !!apiKey || canTestStoredConfig;
 
   useEffect(() => {
     if (!open) {
@@ -79,6 +83,14 @@ export const AddKeyModal = ({
   }, [canAddServerKey, editingKey, open]);
 
   const testKey = useCallback(async () => {
+    if (storage === ByokKeyStorage.local) {
+      setTestResult({
+        ok: true,
+        status: ByokKeyTestStatus.passed,
+        message: null,
+      });
+      return;
+    }
     if (!gql) {
       return;
     }
@@ -123,7 +135,7 @@ export const AddKeyModal = ({
   ]);
 
   const save = useCallback(async () => {
-    if (!testResult?.ok || !gql) {
+    if (!testResult?.ok) {
       return;
     }
     if (storage === ByokKeyStorage.local) {
@@ -151,7 +163,7 @@ export const AddKeyModal = ({
         return;
       }
       setLocalKeys(await readLocalKeys(workspaceId));
-    } else {
+    } else if (gql) {
       await gql({
         query: upsertByokMutation,
         variables: {
@@ -172,6 +184,8 @@ export const AddKeyModal = ({
         },
       });
       await onSaved();
+    } else {
+      return;
     }
     onOpenChange(false);
     setApiKey('');

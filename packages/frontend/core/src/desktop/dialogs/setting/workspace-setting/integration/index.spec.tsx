@@ -126,22 +126,22 @@ describe('IntegrationSetting', () => {
     {
       name: 'owners',
       info: { isOwner: true, isAdmin: false, isTeam: false },
-      visible: true,
+      visible: false,
     },
     {
       name: 'admins in personal workspaces',
       info: { isOwner: false, isAdmin: true, isTeam: false },
-      visible: true,
+      visible: false,
     },
     {
       name: 'admins in team workspaces',
       info: { isOwner: false, isAdmin: true, isTeam: true },
-      visible: true,
+      visible: false,
     },
   ];
 
   for (const testCase of byokVisibilityCases) {
-    test(`shows BYOK integration for ${testCase.name}`, () => {
+    test(`does not show BYOK integration for ${testCase.name}`, () => {
       workspaceInfoState.info = testCase.info;
       render(<IntegrationSetting />);
 

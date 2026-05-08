@@ -4,6 +4,7 @@ import {
   resolveGlobalLoadingEventAtom,
 } from '@affine/component/global-loading';
 import type { AffineEditorContainer } from '@affine/core/blocksuite/block-suite-editor/blocksuite-editor';
+import { DocsService } from '@affine/core/modules/doc';
 import { EditorService } from '@affine/core/modules/editor';
 import { getAFFiNEWorkspaceSchema } from '@affine/core/modules/workspace/global-schema';
 import { useI18n } from '@affine/i18n';
@@ -27,6 +28,7 @@ import {
   PdfTransformer,
   ZipTransformer,
 } from '@blocksuite/affine/widgets/linked-doc';
+import { getAssetName } from '@blocksuite/store';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useSetAtom } from 'jotai';
 import { nanoid } from 'nanoid';
@@ -38,6 +40,7 @@ type ExportType =
   | 'html'
   | 'png'
   | 'markdown'
+  | 'markdown-with-linked-docs'
   | 'copy-markdown'
   | 'snapshot'
   | 'pdf-export';
@@ -63,6 +66,33 @@ interface AdapterConfig {
   contentType: string;
   indexFileName: string;
 }
+
+interface ExportedMarkdownDoc {
+  doc: Store;
+  markdown: string;
+  assetsIds: string[];
+}
+
+type ExportDirectoryHandle = {
+  getDirectoryHandle: (
+    name: string,
+    options?: { create?: boolean }
+  ) => Promise<ExportDirectoryHandle>;
+  getFileHandle: (
+    name: string,
+    options?: { create?: boolean }
+  ) => Promise<{
+    createWritable: () => Promise<{
+      write: (data: Blob | string) => Promise<void>;
+      close: () => Promise<void>;
+    }>;
+  }>;
+};
+
+type WindowWithDirectoryPicker = Window &
+  typeof globalThis & {
+    showDirectoryPicker?: () => Promise<ExportDirectoryHandle>;
+  };
 
 function createTransformer(doc: Store) {
   return new Transformer({
@@ -116,6 +146,287 @@ async function exportDoc(
   }
 
   download(downloadBlob, name);
+}
+
+function sanitizeFilename(name: string) {
+  return (
+    [...name]
+      .map(char => (char.charCodeAt(0) < 32 ? '-' : char))
+      .join('')
+      .trim()
+      .replace(/[<>:"/\\|?*]/g, '-')
+      .replace(/\s+/g, ' ')
+      .slice(0, 120) || 'Untitled'
+  );
+}
+
+function uniqueMarkdownPath(
+  doc: Store,
+  usedPaths: Set<string>,
+  isIndex: boolean
+) {
+  if (isIndex) {
+    usedPaths.add('index.md');
+    return 'index.md';
+  }
+
+  const base = sanitizeFilename(doc.meta?.title || doc.id || 'Untitled');
+  let path = `docs/${base}.md`;
+  let index = 2;
+
+  while (usedPaths.has(path)) {
+    path = `docs/${base}-${index}.md`;
+    index++;
+  }
+
+  usedPaths.add(path);
+  return path;
+}
+
+function splitExportPath(path: string) {
+  return path.split('/').filter(Boolean).map(sanitizeFilename);
+}
+
+async function writeFileToDirectory(
+  root: ExportDirectoryHandle,
+  filePath: string,
+  content: Blob | string
+) {
+  const parts = splitExportPath(filePath);
+  const fileName = parts.pop();
+  if (!fileName) {
+    return;
+  }
+
+  let dir = root;
+  for (const part of parts) {
+    dir = await dir.getDirectoryHandle(part, { create: true });
+  }
+
+  const file = await dir.getFileHandle(fileName, { create: true });
+  const writable = await file.createWritable();
+  try {
+    await writable.write(content);
+  } finally {
+    await writable.close();
+  }
+}
+
+async function writeMarkdownExportToFolder(
+  exportedDocs: ExportedMarkdownDoc[],
+  assets: Map<string, Blob>,
+  allAssetsIds: string[],
+  rootDoc: Store
+) {
+  const picker = (window as WindowWithDirectoryPicker).showDirectoryPicker as
+    | (() => Promise<ExportDirectoryHandle>)
+    | undefined;
+  if (!picker) {
+    return false;
+  }
+
+  let root: ExportDirectoryHandle;
+  try {
+    root = await picker();
+  } catch (error) {
+    if ((error as DOMException).name === 'AbortError') {
+      return true;
+    }
+    throw error;
+  }
+  const usedPaths = new Set<string>();
+
+  for (const exportedDoc of exportedDocs) {
+    const path = uniqueMarkdownPath(
+      exportedDoc.doc,
+      usedPaths,
+      exportedDoc.doc.id === rootDoc.id
+    );
+    await writeFileToDirectory(root, path, exportedDoc.markdown);
+  }
+
+  for (const [id, blob] of assets) {
+    if (!allAssetsIds.includes(id)) {
+      continue;
+    }
+    await writeFileToDirectory(
+      root,
+      `assets/${getAssetName(assets, id)}`,
+      blob
+    );
+  }
+
+  return true;
+}
+
+function collectLinkedDocIdsFromValue(
+  value: unknown,
+  docId: string,
+  linkedDocIds: Set<string>,
+  seen = new WeakSet<object>()
+) {
+  if (!value || typeof value !== 'object') {
+    return;
+  }
+
+  if (seen.has(value)) {
+    return;
+  }
+  seen.add(value);
+
+  const record = value as Record<string, unknown>;
+  if (
+    record.type === 'LinkedPage' &&
+    typeof record.pageId === 'string' &&
+    record.pageId !== docId
+  ) {
+    linkedDocIds.add(record.pageId);
+  }
+
+  const props = record.props as Record<string, unknown> | undefined;
+  if (
+    (record.flavour === 'affine:embed-linked-doc' ||
+      record.flavour === 'affine:embed-synced-doc') &&
+    typeof props?.pageId === 'string' &&
+    props.pageId !== docId
+  ) {
+    linkedDocIds.add(props.pageId);
+  }
+
+  const maybeText = props?.text as { toDelta?: () => unknown } | undefined;
+  if (typeof maybeText?.toDelta === 'function') {
+    collectLinkedDocIdsFromValue(
+      maybeText.toDelta(),
+      docId,
+      linkedDocIds,
+      seen
+    );
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach(item =>
+      collectLinkedDocIdsFromValue(item, docId, linkedDocIds, seen)
+    );
+    return;
+  }
+
+  for (const childValue of Object.values(record)) {
+    collectLinkedDocIdsFromValue(childValue, docId, linkedDocIds, seen);
+  }
+}
+
+function collectLinkedDocIds(doc: Store) {
+  const linkedDocIds = new Set<string>();
+  doc
+    .getAllModels()
+    .forEach(model =>
+      collectLinkedDocIdsFromValue(model, doc.id, linkedDocIds)
+    );
+
+  return [...linkedDocIds];
+}
+
+async function collectMarkdownExportDocs(
+  rootDoc: Store,
+  docsService: DocsService
+) {
+  const docs: Store[] = [];
+  const visited = new Set<string>();
+  const queue = [rootDoc.id];
+
+  while (queue.length > 0) {
+    const docId = queue.shift();
+    if (!docId || visited.has(docId)) {
+      continue;
+    }
+    visited.add(docId);
+
+    const docStore = rootDoc.workspace.getDoc(docId)?.getStore({ id: docId });
+    if (!docStore) {
+      continue;
+    }
+
+    const loaded = docsService.open(docId);
+    const disposePriorityLoad = loaded.doc.addPriorityLoad(10);
+    try {
+      await loaded.doc.waitForSyncReady();
+      collectLinkedDocIds(docStore).forEach(linkedDocId => {
+        if (!visited.has(linkedDocId)) {
+          queue.push(linkedDocId);
+        }
+      });
+      docs.push(docStore);
+    } finally {
+      disposePriorityLoad();
+      loaded.release();
+    }
+  }
+
+  return docs;
+}
+
+async function exportToMarkdownWithLinkedDocs(
+  doc: Store,
+  docsService: DocsService,
+  std?: BlockStdScope
+) {
+  if (!std) {
+    await exportToMarkdown(doc, std);
+    return;
+  }
+
+  const transformer = createTransformer(doc);
+  const adapterFactory = std.store.provider.get(
+    MarkdownAdapterFactoryIdentifier
+  );
+  const adapter = adapterFactory.get(transformer);
+  const docs = await collectMarkdownExportDocs(doc, docsService);
+  const exportedDocs: ExportedMarkdownDoc[] = [];
+
+  for (const targetDoc of docs) {
+    const result = (await adapter.fromDoc(targetDoc)) as AdapterResult;
+    if (!result) {
+      continue;
+    }
+    exportedDocs.push({
+      doc: targetDoc,
+      markdown: result.file ?? '',
+      assetsIds: result.assetsIds,
+    });
+  }
+
+  if (exportedDocs.length === 0) {
+    return;
+  }
+
+  const allAssetsIds = [
+    ...new Set(exportedDocs.flatMap(exportedDoc => exportedDoc.assetsIds)),
+  ];
+  const assets = transformer.assets ?? new Map<string, Blob>();
+  if (
+    BUILD_CONFIG.isElectron &&
+    (await writeMarkdownExportToFolder(exportedDocs, assets, allAssetsIds, doc))
+  ) {
+    return;
+  }
+
+  const zip = await createAssetsArchive(assets, allAssetsIds);
+  const usedPaths = new Set<string>();
+
+  for (const exportedDoc of exportedDocs) {
+    const path = uniqueMarkdownPath(
+      exportedDoc.doc,
+      usedPaths,
+      exportedDoc.doc.id === doc.id
+    );
+    await zip.file(
+      path,
+      new Blob([exportedDoc.markdown], { type: 'text/plain' })
+    );
+  }
+
+  const docTitle = doc.meta?.title || 'Untitled';
+  download(await zip.generate(), `${docTitle}.zip`);
 }
 
 async function exportToHtml(doc: Store, std?: BlockStdScope) {
@@ -175,7 +486,8 @@ async function exportHandler({
   page,
   type,
   editorContainer,
-}: ExportHandlerOptions): Promise<boolean> {
+  docsService,
+}: ExportHandlerOptions & { docsService: DocsService }): Promise<boolean> {
   const editorRoot = document.querySelector('editor-host');
   track.$.sharePanel.$.export({
     type,
@@ -186,6 +498,9 @@ async function exportHandler({
       return true;
     case 'markdown':
       await exportToMarkdown(page, editorRoot?.std);
+      return true;
+    case 'markdown-with-linked-docs':
+      await exportToMarkdownWithLinkedDocs(page, docsService, editorRoot?.std);
       return true;
     case 'copy-markdown':
       return await copyAsMarkdown(page, editorRoot?.std);
@@ -216,6 +531,7 @@ async function exportHandler({
 
 export const useExportPage = () => {
   const editor = useService(EditorService).editor;
+  const docsService = useService(DocsService);
   const editorContainer = useLiveData(editor.editorContainer$);
   const blocksuiteDoc = editor.doc.blockSuiteDoc;
   const pushGlobalLoadingEvent = useSetAtom(pushGlobalLoadingEventAtom);
@@ -239,6 +555,7 @@ export const useExportPage = () => {
           page: blocksuiteDoc,
           type,
           editorContainer: originEditorContainer,
+          docsService,
         });
 
         if (!success) {
@@ -271,6 +588,7 @@ export const useExportPage = () => {
     },
     [
       blocksuiteDoc,
+      docsService,
       editorContainer,
       pushGlobalLoadingEvent,
       resolveGlobalLoadingEvent,

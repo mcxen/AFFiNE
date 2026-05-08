@@ -3,12 +3,12 @@ import {
   SettingHeader,
   SettingWrapper,
 } from '@affine/component/setting-components';
-import { AI_CUSTOM_MODEL_ID_KEY } from '@affine/core/modules/ai-button/services/models';
 import { WorkspaceServerService } from '@affine/core/modules/cloud';
 import { GlobalStateService } from '@affine/core/modules/storage';
 import { WorkspaceService } from '@affine/core/modules/workspace';
 import {
   ByokKeyStorage,
+  ByokProvider,
   clearWorkspaceByokConfigsMutation as clearByokMutation,
   deleteWorkspaceByokConfigMutation as deleteByokMutation,
   type GraphQLQuery,
@@ -40,6 +40,22 @@ import type {
 } from './types';
 import { UsagePanel } from './usage';
 
+const AI_CUSTOM_MODEL_ID_KEY = 'AICustomModelId';
+
+const LOCAL_BYOK_SETTINGS = {
+  workspaceId: '',
+  entitled: true,
+  serverEntitled: false,
+  localEntitled: true,
+  entitlementRequired: [],
+  keys: [],
+  allowedProviders: Object.values(ByokProvider),
+  localStorageSupported: true,
+  customEndpointSupported: true,
+  hasAiPlan: false,
+  warnings: [],
+} satisfies ByokSettings;
+
 const reorderByokMutation = {
   id: 'reorderWorkspaceByokConfigsMutation',
   op: 'reorderWorkspaceByokConfigs',
@@ -68,31 +84,49 @@ export const WorkspaceByokSetting = () => {
   } | null>(null);
 
   const load = useCallback(async () => {
-    if (!workspaceServer.server) {
-      return;
-    }
-    const to = new Date();
-    const from = new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const gql = workspaceServer.server.gql as GqlFn;
-    const data = await gql({
-      query: byokSettingsQuery,
-      variables: {
-        id: workspace.id,
-        from: from.toISOString(),
-        to: to.toISOString(),
-      },
-    });
     const [localStorageSupported, nextLocalKeys] = await Promise.all([
       localByokStorageSupported(),
       readLocalKeys(workspace.id),
     ]);
-    setSettings({
-      ...data.workspace.byokSettings,
-      localStorageSupported:
-        data.workspace.byokSettings.localEntitled && localStorageSupported,
-    });
-    setUsage(data.workspace.byokUsage);
     setLocalKeys(nextLocalKeys);
+
+    const localOnlySettings = {
+      ...LOCAL_BYOK_SETTINGS,
+      workspaceId: workspace.id,
+      localStorageSupported,
+      entitled: localStorageSupported,
+      localEntitled: localStorageSupported,
+    };
+
+    if (!workspaceServer.server) {
+      setSettings(localOnlySettings);
+      setUsage([]);
+      return;
+    }
+
+    try {
+      const to = new Date();
+      const from = new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const gql = workspaceServer.server.gql as GqlFn;
+      const data = await gql({
+        query: byokSettingsQuery,
+        variables: {
+          id: workspace.id,
+          from: from.toISOString(),
+          to: to.toISOString(),
+        },
+      });
+      setSettings({
+        ...data.workspace.byokSettings,
+        localStorageSupported:
+          data.workspace.byokSettings.localEntitled && localStorageSupported,
+      });
+      setUsage(data.workspace.byokUsage);
+    } catch (error) {
+      logByokError('Failed to load server BYOK settings, using local', error);
+      setSettings(localOnlySettings);
+      setUsage([]);
+    }
   }, [workspace.id, workspaceServer.server]);
 
   useEffect(() => {
@@ -218,12 +252,7 @@ export const WorkspaceByokSetting = () => {
   );
 
   if (!settings) {
-    return (
-      <SettingHeader
-        title={byokT(t, 'title-beta')}
-        subtitle={byokT(t, 'loading')}
-      />
-    );
+    return <SettingHeader title="AI" subtitle={byokT(t, 'loading')} />;
   }
 
   if (!settings.entitled) {
@@ -256,10 +285,7 @@ export const WorkspaceByokSetting = () => {
 
   return (
     <>
-      <SettingHeader
-        title={byokT(t, 'title-beta')}
-        subtitle={byokT(t, 'header')}
-      />
+      <SettingHeader title="AI" subtitle={byokT(t, 'header')} />
       <SettingWrapper>
         <div className={styles.stack}>
           {settings.hasAiPlan ? (
@@ -371,21 +397,25 @@ export const WorkspaceByokSetting = () => {
             </div>
           </div>
 
-          <CoveragePanel keys={keys} settings={settings} />
+          {settings.serverEntitled ? (
+            <CoveragePanel keys={keys} settings={settings} />
+          ) : null}
 
-          <UsagePanel
-            keys={keys}
-            usage={usage}
-            onClearAll={() => {
-              clearAll().catch(error => {
-                logByokError('Failed to clear BYOK keys', error);
-                notify.error({
-                  title: byokT(t, 'notify.clear-failed.title'),
-                  message: byokT(t, 'notify.operation-failed.message'),
+          {settings.serverEntitled ? (
+            <UsagePanel
+              keys={keys}
+              usage={usage}
+              onClearAll={() => {
+                clearAll().catch(error => {
+                  logByokError('Failed to clear BYOK keys', error);
+                  notify.error({
+                    title: byokT(t, 'notify.clear-failed.title'),
+                    message: byokT(t, 'notify.operation-failed.message'),
+                  });
                 });
-              });
-            }}
-          />
+              }}
+            />
+          ) : null}
         </div>
       </SettingWrapper>
       <AddKeyModal

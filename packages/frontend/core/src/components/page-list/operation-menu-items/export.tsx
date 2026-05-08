@@ -22,6 +22,7 @@ interface ExportProps {
       | 'html'
       | 'png'
       | 'markdown'
+      | 'markdown-with-linked-docs'
       | 'copy-markdown'
       | 'snapshot'
       | 'pdf-export'
@@ -64,6 +65,13 @@ export const ExportMenuItems = ({
         type="markdown"
         icon={<ExportToMarkdownIcon />}
         label={t['Export to Markdown']()}
+      />
+      <ExportMenuItem
+        onSelect={() => exportHandler('markdown-with-linked-docs')}
+        className={className}
+        type="markdown-with-linked-docs"
+        icon={<ExportToMarkdownIcon />}
+        label="Export Markdown with child docs"
       />
     </>
   );

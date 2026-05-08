@@ -9,7 +9,6 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
-import type * as Infra from '@toeverything/infra';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
@@ -31,6 +30,12 @@ const WorkspaceServerServiceToken = vi.hoisted(
   () => class WorkspaceServerService {}
 );
 const WorkspaceServiceToken = vi.hoisted(() => class WorkspaceService {});
+const GlobalStateServiceToken = vi.hoisted(() => class GlobalStateService {});
+const globalState = vi.hoisted(() => ({
+  get: vi.fn(() => ''),
+  set: vi.fn(),
+  del: vi.fn(),
+}));
 
 const ByokProvider = vi.hoisted(() => ({
   openai: 'openai',
@@ -118,6 +123,10 @@ vi.mock('@affine/core/modules/cloud', () => ({
 
 vi.mock('@affine/core/modules/workspace', () => ({
   WorkspaceService: WorkspaceServiceToken,
+}));
+
+vi.mock('@affine/core/modules/storage', () => ({
+  GlobalStateService: GlobalStateServiceToken,
 }));
 
 vi.mock('@affine/electron-api', () => ({
@@ -211,11 +220,8 @@ vi.mock('@blocksuite/icons/rc', () => ({
   TranscriptWithAiIcon: () => <span>transcript</span>,
 }));
 
-vi.mock('@toeverything/infra', async importOriginal => {
-  const actual = await importOriginal<typeof Infra>();
-
+vi.mock('@toeverything/infra', () => {
   return {
-    ...actual,
     useService: (token: unknown) => {
       if (token === WorkspaceServerServiceToken) {
         return {
@@ -227,6 +233,11 @@ vi.mock('@toeverything/infra', async importOriginal => {
       if (token === WorkspaceServiceToken) {
         return {
           workspace: workspaceState,
+        };
+      }
+      if (token === GlobalStateServiceToken) {
+        return {
+          globalState,
         };
       }
       return {};
