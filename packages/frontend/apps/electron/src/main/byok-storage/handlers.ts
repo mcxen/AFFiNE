@@ -96,6 +96,67 @@ function sortWorkspaceKeys(keys: WorkspaceByokKey[]) {
   return keys.toSorted((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 }
 
+function normalizeOpenAIEndpoint(endpoint?: string | null) {
+  const normalized = endpoint?.trim() || 'https://api.openai.com/v1';
+  return normalized.replace(/\/$/, '');
+}
+
+function sanitizeProbeError(error: unknown) {
+  if (error instanceof Error) {
+    return error.message.slice(0, 300);
+  }
+  return String(error).slice(0, 300);
+}
+
+async function probeOpenAIChatModel(key: WorkspaceByokKey, modelId: string) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const endpoint = normalizeOpenAIEndpoint(key.endpoint);
+    const response = await fetch(`${endpoint}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${key.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: modelId,
+        messages: [{ role: 'user', content: 'ping' }],
+        max_tokens: 1,
+        stream: false,
+      }),
+      signal: controller.signal,
+    });
+
+    if (response.ok) {
+      return { ok: true as const, message: null };
+    }
+
+    let detail = '';
+    try {
+      const body = (await response.text()).slice(0, 300);
+      detail = body ? ` ${body}` : '';
+    } catch {
+      // Ignore response body parsing failures. HTTP status is enough context.
+    }
+
+    return {
+      ok: false as const,
+      message: `Provider chat probe failed with HTTP ${response.status}.${detail}`,
+    };
+  } catch (error) {
+    return {
+      ok: false as const,
+      message:
+        error instanceof Error && error.name === 'AbortError'
+          ? 'Provider chat probe timed out.'
+          : `Provider chat probe failed: ${sanitizeProbeError(error)}`,
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function readWorkspaceKeys(workspaceId: string): WorkspaceByokKey[] {
   const encryptedKeys = byokStorage.get<string[]>(workspaceId) ?? [];
   return sortWorkspaceKeys(
@@ -127,6 +188,43 @@ export const byokStorageHandlers = {
   },
   getWorkspaceLeaseProviders: async (_e, workspaceId: string) => {
     return readWorkspaceKeys(workspaceId).filter(key => key.enabled !== false);
+  },
+  testWorkspaceChatModel: async (_e, workspaceId: string, modelId: string) => {
+    const normalizedModelId = modelId.trim();
+    if (!normalizedModelId) {
+      return { ok: false, message: 'Model id is required.' };
+    }
+
+    const keys = readWorkspaceKeys(workspaceId).filter(
+      key => key.enabled !== false && key.provider === 'openai'
+    );
+    if (!keys.length) {
+      return {
+        ok: false,
+        skipped: true,
+        message: 'No enabled local OpenAI-compatible provider key found.',
+      };
+    }
+
+    const failures: string[] = [];
+    for (const key of keys) {
+      const result = await probeOpenAIChatModel(key, normalizedModelId);
+      if (result.ok) {
+        return {
+          ok: true,
+          provider: key.provider,
+          keyId: key.id,
+          keyName: key.name,
+          message: null,
+        };
+      }
+      failures.push(`${key.name}: ${result.message}`);
+    }
+
+    return {
+      ok: false,
+      message: failures.join('\n'),
+    };
   },
   upsertWorkspaceKey: async (
     _e,

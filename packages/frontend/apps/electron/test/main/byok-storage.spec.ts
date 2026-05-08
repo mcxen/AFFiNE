@@ -27,6 +27,7 @@ beforeEach(async () => {
 afterEach(async () => {
   disposeWorkspaceByokStorage?.();
   vi.resetModules();
+  vi.unstubAllGlobals();
   await fs.remove(tmpDir);
 });
 
@@ -148,6 +149,107 @@ describe('byok storage handlers', () => {
       enabled: true,
     });
   });
+
+  test('probes local OpenAI-compatible chat model without exposing api keys', async () => {
+    const { byokStorageHandlers, disposeWorkspaceByokStorage: dispose } =
+      await import('@affine/electron/main/byok-storage/handlers');
+    disposeWorkspaceByokStorage = dispose;
+    const ipcEvent = undefined;
+    const fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => '',
+    });
+    vi.stubGlobal('fetch', fetch);
+
+    await byokStorageHandlers.upsertWorkspaceKey(ipcEvent, 'workspace-1', {
+      id: 'local-openai',
+      provider: 'openai',
+      name: 'OpenAI',
+      apiKey: 'sk-openai',
+      endpoint: 'https://api.example.com/v1/',
+    });
+
+    await expect(
+      byokStorageHandlers.testWorkspaceChatModel(
+        ipcEvent,
+        'workspace-1',
+        'deepseek-v4-pro'
+      )
+    ).resolves.toMatchObject({
+      ok: true,
+      keyId: 'local-openai',
+      keyName: 'OpenAI',
+    });
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.com/v1/chat/completions',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          Authorization: 'Bearer sk-openai',
+        }),
+      })
+    );
+    expect(
+      JSON.stringify(
+        await byokStorageHandlers.testWorkspaceChatModel(
+          ipcEvent,
+          'workspace-1',
+          'deepseek-v4-pro'
+        )
+      )
+    ).not.toContain('sk-openai');
+  });
+
+  test('returns local chat probe failure details', async () => {
+    const { byokStorageHandlers, disposeWorkspaceByokStorage: dispose } =
+      await import('@affine/electron/main/byok-storage/handlers');
+    disposeWorkspaceByokStorage = dispose;
+    const ipcEvent = undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        text: async () => '{"error":"model not found"}',
+      })
+    );
+
+    await byokStorageHandlers.upsertWorkspaceKey(ipcEvent, 'workspace-1', {
+      id: 'local-openai',
+      provider: 'openai',
+      name: 'OpenAI',
+      apiKey: 'sk-openai',
+    });
+
+    await expect(
+      byokStorageHandlers.testWorkspaceChatModel(
+        ipcEvent,
+        'workspace-1',
+        'missing-model'
+      )
+    ).resolves.toMatchObject({
+      ok: false,
+      message: expect.stringContaining('HTTP 404'),
+    });
+  });
+
+  test('skips local chat probe when no local OpenAI key exists', async () => {
+    const { byokStorageHandlers, disposeWorkspaceByokStorage: dispose } =
+      await import('@affine/electron/main/byok-storage/handlers');
+    disposeWorkspaceByokStorage = dispose;
+
+    await expect(
+      byokStorageHandlers.testWorkspaceChatModel(
+        undefined,
+        'workspace-1',
+        'deepseek-v4-pro'
+      )
+    ).resolves.toMatchObject({
+      ok: false,
+      skipped: true,
+    });
+  });
 });
 
 describe('byok storage with unencrypted fallback', () => {
@@ -196,11 +298,10 @@ describe('byok storage with unencrypted fallback', () => {
     expect(list[0].id).toBe('local-openai');
     expect(list[0].endpointEditable).toBe(true);
 
-    const leaseProviders =
-      await byokStorageHandlers.getWorkspaceLeaseProviders(
-        ipcEvent,
-        'workspace-1'
-      );
+    const leaseProviders = await byokStorageHandlers.getWorkspaceLeaseProviders(
+      ipcEvent,
+      'workspace-1'
+    );
     expect(leaseProviders).toHaveLength(1);
     expect(leaseProviders[0].apiKey).toBe('sk-openai');
 

@@ -34,6 +34,7 @@ import {
   localByokStorageSupported,
   readLocalKeys,
   reorderLocalKeys,
+  testLocalChatModel,
 } from './local-storage';
 import { byokT } from './metadata';
 import type {
@@ -181,6 +182,24 @@ export const WorkspaceByokSetting = () => {
     const abortController = new AbortController();
     const timeout = setTimeout(() => abortController.abort(), 15000);
     try {
+      if (localKeys.some(key => key.provider === ByokProvider.openai)) {
+        const result = await testLocalChatModel(workspace.id, normalized);
+        if (result && !result.skipped) {
+          if (result.ok) {
+            notify.success({
+              title: 'Model connectivity check passed',
+              message: `${normalized} responded through ${result.keyName}.`,
+            });
+          } else {
+            notify.error({
+              title: 'Model connectivity check failed',
+              message: result.message,
+            });
+          }
+          return;
+        }
+      }
+
       const stream = await AIProvider.actions.chat({
         input: 'ping',
         workspaceId: workspace.id,
@@ -209,7 +228,7 @@ export const WorkspaceByokSetting = () => {
       clearTimeout(timeout);
       setCheckingModel(false);
     }
-  }, [customModelId, workspace.id]);
+  }, [customModelId, localKeys, workspace.id]);
 
   const clearAll = useCallback(async () => {
     if (!settings) {
@@ -394,7 +413,10 @@ export const WorkspaceByokSetting = () => {
               <Button
                 onClick={() => {
                   checkModelConnectivity().catch(error => {
-                    logByokError('Failed to check BYOK model connectivity', error);
+                    logByokError(
+                      'Failed to check BYOK model connectivity',
+                      error
+                    );
                   });
                 }}
                 disabled={checkingModel}

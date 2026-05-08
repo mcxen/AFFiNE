@@ -113,3 +113,17 @@ export async function clearLocalKeys(workspaceId: string) {
     return false;
   }
 }
+
+export async function testLocalChatModel(workspaceId: string, modelId: string) {
+  const storage = byokStorageApi();
+  if (!(await localByokStorageSupported()) || !storage) {
+    return null;
+  }
+
+  const tester = storage.testWorkspaceChatModel;
+  if (typeof tester !== 'function') {
+    return null;
+  }
+
+  return await tester(workspaceId, modelId);
+}
