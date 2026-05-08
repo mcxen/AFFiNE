@@ -17,7 +17,6 @@ import { useLiveData, useService } from '@toeverything/infra';
 import clsx from 'clsx';
 import { useCallback, useMemo } from 'react';
 
-import { PlanTag } from '../plan-tag';
 import * as styles from './styles.css';
 
 const getRoleName = (t: ReturnType<typeof useI18n>, role?: DocRole) => {
@@ -35,15 +34,7 @@ const getRoleName = (t: ReturnType<typeof useI18n>, role?: DocRole) => {
   }
 };
 
-export const MembersPermission = ({
-  openPaywallModal,
-  hittingPaywall,
-  disabled,
-}: {
-  hittingPaywall: boolean;
-  openPaywallModal?: () => void;
-  disabled?: boolean;
-}) => {
+export const MembersPermission = ({ disabled }: { disabled?: boolean }) => {
   const t = useI18n();
   const shareInfoService = useService(ShareInfoService);
   const docGrantedUsersService = useService(DocGrantedUsersService);
@@ -82,28 +73,16 @@ export const MembersPermission = ({
   }, [changePermission]);
 
   const selectEdit = useCallback(() => {
-    if (hittingPaywall) {
-      openPaywallModal?.();
-      return;
-    }
     changePermission(DocRole.Editor);
-  }, [changePermission, hittingPaywall, openPaywallModal]);
+  }, [changePermission]);
 
   const selectRead = useCallback(() => {
-    if (hittingPaywall) {
-      openPaywallModal?.();
-      return;
-    }
     changePermission(DocRole.Reader);
-  }, [changePermission, hittingPaywall, openPaywallModal]);
+  }, [changePermission]);
 
   const selectNone = useCallback(() => {
-    if (hittingPaywall) {
-      openPaywallModal?.();
-      return;
-    }
     changePermission(DocRole.None);
-  }, [changePermission, hittingPaywall, openPaywallModal]);
+  }, [changePermission]);
 
   return (
     <div className={styles.rowContainerStyle}>
@@ -138,7 +117,6 @@ export const MembersPermission = ({
                 <div className={styles.publicItemRowStyle}>
                   <div className={styles.tagContainerStyle}>
                     {t['com.affine.share-menu.option.permission.can-edit']()}
-                    {hittingPaywall ? <PlanTag /> : null}
                   </div>
                 </div>
               </MenuItem>
@@ -149,7 +127,6 @@ export const MembersPermission = ({
                 <div className={styles.publicItemRowStyle}>
                   <div className={styles.tagContainerStyle}>
                     {t['com.affine.share-menu.option.permission.can-read']()}
-                    {hittingPaywall ? <PlanTag /> : null}
                   </div>
                 </div>
               </MenuItem>
@@ -160,7 +137,6 @@ export const MembersPermission = ({
                 <div className={styles.publicItemRowStyle}>
                   <div className={styles.tagContainerStyle}>
                     {t['com.affine.share-menu.option.permission.no-access']()}
-                    {hittingPaywall ? <PlanTag /> : null}
                   </div>
                 </div>
               </MenuItem>

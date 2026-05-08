@@ -35,13 +35,6 @@ export const fileSizeInfo = style({
   color: cssVarV2('text/secondary'),
 });
 
-export const upgradeLink = style({
-  color: '#1E96F0',
-  textDecoration: 'none',
-  fontWeight: 500,
-  whiteSpace: 'nowrap',
-});
-
 export const fileListContainer = style({
   display: 'flex',
   flexDirection: 'column',

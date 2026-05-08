@@ -156,10 +156,8 @@ export const WorkspaceByokSetting = () => {
       return a.sortOrder - b.sortOrder;
     });
   }, [localKeys, settings?.keys]);
-  const canAddServerKey = settings?.serverEntitled ?? false;
-  const canAddLocalKey =
-    (settings?.localEntitled ?? false) &&
-    (settings?.localStorageSupported ?? false);
+  const canAddServerKey = !!workspaceServer.server;
+  const canAddLocalKey = settings?.localStorageSupported ?? false;
   const canManageKeys = canAddServerKey || canAddLocalKey;
   const checkModelConnectivity = useCallback(async () => {
     const normalized = customModelId.trim();
@@ -234,10 +232,10 @@ export const WorkspaceByokSetting = () => {
     if (!settings) {
       return;
     }
-    if (!workspaceServer.server && settings.serverEntitled) {
+    if (!workspaceServer.server) {
       return;
     }
-    if (settings.serverEntitled && workspaceServer.server) {
+    if (workspaceServer.server) {
       const gql = workspaceServer.server.gql as GqlFn;
       await gql({
         query: clearByokMutation,
@@ -440,11 +438,11 @@ export const WorkspaceByokSetting = () => {
             </div>
           </div>
 
-          {settings.serverEntitled ? (
+          {workspaceServer.server ? (
             <CoveragePanel keys={keys} settings={settings} />
           ) : null}
 
-          {settings.serverEntitled ? (
+          {workspaceServer.server ? (
             <UsagePanel
               keys={keys}
               usage={usage}

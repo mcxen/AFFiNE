@@ -16,13 +16,9 @@ import { MemberItem } from './member-item';
 import * as styles from './member-management.css';
 
 export const MemberManagement = ({
-  openPaywallModal,
-  hittingPaywall,
   onClickBack,
   onClickInvite,
 }: {
-  hittingPaywall: boolean;
-  openPaywallModal: () => void;
   onClickBack: () => void;
   onClickInvite: () => void;
 }) => {
@@ -58,8 +54,6 @@ export const MemberManagement = ({
       </div>
       {grantedUserList ? (
         <MemberList
-          openPaywallModal={openPaywallModal}
-          hittingPaywall={hittingPaywall}
           grantedUserList={grantedUserList}
           grantedUserCount={grantedUserCount}
           loadMore={loadMore}
@@ -83,18 +77,14 @@ export const MemberManagement = ({
 };
 
 const MemberList = ({
-  openPaywallModal,
-  hittingPaywall,
   grantedUserList,
   grantedUserCount,
   loadMore,
   canManageUsers,
 }: {
-  hittingPaywall: boolean;
   canManageUsers: boolean;
   grantedUserList: GrantedUser[];
   grantedUserCount?: number;
-  openPaywallModal: () => void;
   loadMore: () => void;
 }) => {
   const itemContentRenderer = useCallback(
@@ -103,13 +93,11 @@ const MemberList = ({
         <MemberItem
           key={data.user.id}
           grantedUser={data}
-          openPaywallModal={openPaywallModal}
-          hittingPaywall={hittingPaywall}
           canManageUsers={canManageUsers}
         />
       );
     },
-    [canManageUsers, hittingPaywall, openPaywallModal]
+    [canManageUsers]
   );
   return (
     <div className={styles.memberListStyle}>
@@ -118,8 +106,6 @@ const MemberList = ({
           <MemberItem
             key={item.user.id}
             grantedUser={item}
-            openPaywallModal={openPaywallModal}
-            hittingPaywall={hittingPaywall}
             canManageUsers={canManageUsers}
           />
         ))

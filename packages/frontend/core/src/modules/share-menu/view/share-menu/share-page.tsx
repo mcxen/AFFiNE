@@ -100,11 +100,7 @@ export const AFFiNESharePage = (
         <div className={styles.generalAccessStyle}>
           {t['com.affine.share-menu.generalAccess']()}
         </div>
-        <MembersPermission
-          openPaywallModal={props.openPaywallModal}
-          hittingPaywall={!!props.hittingPaywall}
-          disabled={!canManageUsers}
-        />
+        <MembersPermission disabled={!canManageUsers} />
         <PublicDoc disabled={!canPublish} />
       </div>
       <Divider className={styles.divider} />

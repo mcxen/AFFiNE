@@ -336,7 +336,7 @@ describe('WorkspaceByokSetting', () => {
     electronApiState.apis = undefined;
   });
 
-  test('renders read-only empty state without key management entitlement', async () => {
+  test('renders empty state with key management available without plan entitlement', async () => {
     gqlMock.mockImplementation(async ({ query }) => {
       if (query === workspaceByokSettingsQuery) {
         return settingsResponse({
@@ -351,7 +351,7 @@ describe('WorkspaceByokSetting', () => {
     render(<WorkspaceByokSetting />);
 
     await screen.findByTestId('workspace-byok-empty');
-    expect(screen.getByText<HTMLButtonElement>('Add key').disabled).toBe(true);
+    expect(screen.getByText<HTMLButtonElement>('Add key').disabled).toBe(false);
   });
 
   test('renders empty state and keeps save disabled until key test passes', async () => {
@@ -462,15 +462,21 @@ describe('WorkspaceByokSetting', () => {
 
     await screen.findByTestId('workspace-byok-empty');
     fireEvent.click(screen.getAllByText('Add key')[0]);
+    fireEvent.change(screen.getByLabelText('Key storage'), {
+      target: { value: ByokKeyStorage.local },
+    });
     fireEvent.change(screen.getByPlaceholderText('Primary'), {
       target: { value: 'Local OpenAI' },
     });
     fireEvent.change(screen.getByLabelText('API key'), {
       target: { value: 'sk-local' },
     });
-    fireEvent.change(screen.getByPlaceholderText('https://api.example.com/v1'), {
-      target: { value: 'https://opencode.ai/zen/go/v1' },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText('https://api.example.com/v1'),
+      {
+        target: { value: 'https://opencode.ai/zen/go/v1' },
+      }
+    );
     fireEvent.click(screen.getByText('Test key'));
 
     await waitFor(() => {

@@ -46,35 +46,6 @@ export const icon = style({
   color: cssVar('iconColor'),
   fontSize: '24px',
 });
-export const closeIcon = style({
-  position: 'absolute',
-  top: '4px',
-  right: '4px',
-  height: '14px',
-  width: '14px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  boxShadow: cssVar('shadow1'),
-  color: cssVar('textSecondaryColor'),
-  backgroundColor: cssVar('backgroundPrimaryColor'),
-  fontSize: '14px',
-  cursor: 'pointer',
-  transition: '0.1s',
-  borderRadius: '50%',
-  transform: 'scale(0.6)',
-  zIndex: 1,
-  opacity: 0,
-  selectors: {
-    '&:hover': {
-      transform: 'scale(1.1)',
-    },
-    [`${root}:hover &`]: {
-      opacity: 1,
-      transform: 'scale(1)',
-    },
-  },
-});
 export const installLabel = style({
   display: 'flex',
   alignItems: 'center',
@@ -126,14 +97,6 @@ export const versionLabel = style({
   maxWidth: '100px',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
-});
-export const whatsNewLabel = style({
-  display: 'flex',
-  alignItems: 'center',
-  width: '100%',
-  height: '100%',
-  fontSize: cssVar('fontSm'),
-  whiteSpace: 'nowrap',
 });
 export const ellipsisTextOverflow = style({
   whiteSpace: 'nowrap',

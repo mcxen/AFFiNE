@@ -4,6 +4,5 @@ export * from './failed-to-send-page';
 export * from './invite-modal';
 export * from './invite-team-modal';
 export * from './join-failed-page';
-export * from './member-limit-modal';
 export * from './request-to-join-page';
 export * from './sent-request-page';

@@ -1,4 +1,3 @@
-import { configureQuotaModule } from '@affine/core/modules/quota';
 import { type Framework } from '@toeverything/infra';
 
 import {
@@ -81,7 +80,6 @@ export function configureCommonModules(framework: Framework) {
   configureNavigationModule(framework);
   configureTagModule(framework);
   configureCloudModule(framework);
-  configureQuotaModule(framework);
   configurePermissionsModule(framework);
   configureShareDocsModule(framework);
   configureShareSettingModule(framework);

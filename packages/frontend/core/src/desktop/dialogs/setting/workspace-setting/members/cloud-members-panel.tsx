@@ -10,11 +10,9 @@ import {
   WorkspaceMembersService,
   WorkspacePermissionService,
 } from '@affine/core/modules/permissions';
-import { WorkspaceQuotaService } from '@affine/core/modules/quota';
 import { WorkspaceShareSettingService } from '@affine/core/modules/share-setting';
 import { copyTextToClipboard } from '@affine/core/utils/clipboard';
 import { emailRegex } from '@affine/core/utils/email-regex';
-import { UserFriendlyError } from '@affine/error';
 import type { WorkspaceInviteLinkExpireTime } from '@affine/graphql';
 import { useI18n } from '@affine/i18n';
 import { ExportIcon } from '@blocksuite/icons/rc';
@@ -39,11 +37,7 @@ const parseCSV = async (blob: Blob): Promise<string[]> => {
   }
 };
 
-export const CloudWorkspaceMembersPanel = ({
-  isTeam,
-}: {
-  isTeam?: boolean;
-}) => {
+export const CloudWorkspaceMembersPanel = (_props: { isTeam?: boolean }) => {
   const workspaceShareSettingService = useService(WorkspaceShareSettingService);
   const inviteLink = useLiveData(
     workspaceShareSettingService.sharePreview.inviteLink$
@@ -61,14 +55,7 @@ export const CloudWorkspaceMembersPanel = ({
   useEffect(() => {
     membersService.members.revalidate();
   }, [membersService]);
-
-  const workspaceQuotaService = useService(WorkspaceQuotaService);
-  useEffect(() => {
-    workspaceQuotaService.quota.revalidate();
-  }, [workspaceQuotaService]);
-  const isLoading = useLiveData(workspaceQuotaService.quota.isRevalidating$);
-  const error = useLiveData(workspaceQuotaService.quota.error$);
-  const workspaceQuota = useLiveData(workspaceQuotaService.quota.quota$);
+  const memberCount = useLiveData(membersService.members.memberCount$);
 
   const t = useI18n();
 
@@ -119,11 +106,10 @@ export const CloudWorkspaceMembersPanel = ({
         });
         setOpenInvite(false);
         membersService.members.revalidate();
-        workspaceQuotaService.quota.revalidate();
       }
       setIsMutating(false);
     },
-    [membersService, t, workspaceQuotaService.quota]
+    [membersService, t]
   );
 
   const onImportCSV = useAsyncCallback(
@@ -136,39 +122,15 @@ export const CloudWorkspaceMembersPanel = ({
     [onInviteBatchConfirm]
   );
 
-  const desc = useMemo(() => {
-    if (!workspaceQuota) return null;
-
-    if (isTeam) {
-      return <span>{t['com.affine.payment.member.team.description']()}</span>;
-    }
-    return <span>{t['com.affine.payment.member.description2']()}</span>;
-  }, [isTeam, t, workspaceQuota]);
-
   const title = useMemo(() => {
-    if (isTeam) {
-      return `${t['Members']()} (${workspaceQuota?.memberCount})`;
-    }
-    return `${t['Members']()} (${workspaceQuota?.memberCount})`;
-  }, [isTeam, t, workspaceQuota?.memberCount]);
-
-  if (workspaceQuota === null) {
-    if (isLoading) {
-      return <MembersPanelFallback />;
-    } else {
-      return (
-        <span className={styles.errorStyle}>
-          {error
-            ? UserFriendlyError.fromAny(error).message
-            : 'Failed to load members'}
-        </span>
-      );
-    }
-  }
+    return memberCount === undefined
+      ? t['Members']()
+      : `${t['Members']()} (${memberCount})`;
+  }, [memberCount, t]);
 
   return (
     <>
-      <SettingRow name={title} desc={desc} spreadCol={!!isOwnerOrAdmin}>
+      <SettingRow name={title} desc={null} spreadCol={!!isOwnerOrAdmin}>
         {isOwnerOrAdmin ? (
           <>
             <Button onClick={openInviteModal}>{t['Invite Members']()}</Button>
@@ -220,10 +182,7 @@ export const MembersPanelFallback = () => {
 
   return (
     <>
-      <SettingRow
-        name={t['Members']()}
-        desc={t['com.affine.payment.member.description2']()}
-      />
+      <SettingRow name={t['Members']()} desc={null} />
       <div className={styles.membersPanel}>
         <MemberListFallback memberCount={1} />
       </div>

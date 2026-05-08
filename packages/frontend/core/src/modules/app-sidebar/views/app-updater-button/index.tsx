@@ -1,15 +1,7 @@
 import { Tooltip } from '@affine/component';
-import { useCatchEventCallback } from '@affine/core/components/hooks/use-catch-event-hook';
-import { UrlService } from '@affine/core/modules/url';
 import { Unreachable } from '@affine/env/constant';
 import { useI18n } from '@affine/i18n';
-import {
-  CloseIcon,
-  DownloadIcon,
-  NewIcon,
-  ResetIcon,
-} from '@blocksuite/icons/rc';
-import { useService } from '@toeverything/infra';
+import { DownloadIcon, ResetIcon } from '@blocksuite/icons/rc';
 import clsx from 'clsx';
 import { useCallback, useMemo } from 'react';
 
@@ -18,9 +10,6 @@ import * as styles from './index.css';
 export interface AddPageButtonProps {
   onQuitAndInstall: () => void;
   onDownloadUpdate: () => void;
-  onDismissChangelog: () => void;
-  onOpenChangelog: () => void;
-  changelogUnread: boolean;
   updateReady: boolean;
   updateAvailable: {
     version: string;
@@ -42,8 +31,6 @@ interface ButtonContentProps {
   autoDownload: boolean;
   downloadProgress: number | null;
   appQuitting: boolean;
-  changelogUnread: boolean;
-  onDismissChangelog: () => void;
 }
 
 function DownloadUpdate({ updateAvailable }: ButtonContentProps) {
@@ -136,26 +123,6 @@ function OpenDownloadPage({ updateAvailable }: ButtonContentProps) {
   );
 }
 
-function WhatsNew({ onDismissChangelog }: ButtonContentProps) {
-  const t = useI18n();
-  const onClickClose = useCatchEventCallback(() => {
-    onDismissChangelog();
-  }, [onDismissChangelog]);
-  return (
-    <>
-      <div className={clsx([styles.whatsNewLabel])}>
-        <NewIcon className={styles.icon} />
-        <span className={styles.ellipsisTextOverflow}>
-          {t['com.affine.appUpdater.whatsNew']()}
-        </span>
-      </div>
-      <div className={styles.closeIcon} onClick={onClickClose}>
-        <CloseIcon />
-      </div>
-    </>
-  );
-}
-
 const getButtonContentRenderer = (props: ButtonContentProps) => {
   if (props.updateReady) {
     return UpdateReady;
@@ -167,19 +134,14 @@ const getButtonContentRenderer = (props: ButtonContentProps) => {
     }
   } else if (props.updateAvailable && !props.updateAvailable?.allowAutoUpdate) {
     return OpenDownloadPage;
-  } else if (props.changelogUnread) {
-    return WhatsNew;
   }
   return null;
 };
 
 export function AppUpdaterButton({
   updateReady,
-  changelogUnread,
-  onDismissChangelog,
   onDownloadUpdate,
   onQuitAndInstall,
-  onOpenChangelog,
   updateAvailable,
   autoDownload,
   downloadProgress,
@@ -187,7 +149,6 @@ export function AppUpdaterButton({
   className,
   style,
 }: AddPageButtonProps) {
-  const urlService = useService(UrlService);
   const handleClick = useCallback(() => {
     if (updateReady) {
       onQuitAndInstall();
@@ -198,46 +159,27 @@ export function AppUpdaterButton({
         } else {
           onDownloadUpdate();
         }
-      } else {
-        urlService.openPopupWindow(
-          `https://github.com/toeverything/AFFiNE/releases/tag/v${updateAvailable.version}`
-        );
       }
-    } else if (changelogUnread) {
-      onOpenChangelog();
     } else {
       throw new Unreachable();
     }
   }, [
     updateReady,
     updateAvailable,
-    changelogUnread,
     onQuitAndInstall,
     autoDownload,
     onDownloadUpdate,
-    urlService,
-    onOpenChangelog,
   ]);
 
   const contentProps = useMemo(
     () => ({
       updateReady,
       updateAvailable,
-      changelogUnread,
       autoDownload,
       downloadProgress,
       appQuitting,
-      onDismissChangelog,
     }),
-    [
-      updateReady,
-      updateAvailable,
-      changelogUnread,
-      autoDownload,
-      downloadProgress,
-      appQuitting,
-      onDismissChangelog,
-    ]
+    [updateReady, updateAvailable, autoDownload, downloadProgress, appQuitting]
   );
 
   const ContentComponent = getButtonContentRenderer(contentProps);
@@ -274,7 +216,7 @@ export function AppUpdaterButton({
     updateReady,
   ]);
 
-  if (!updateAvailable && !changelogUnread) {
+  if (!updateAvailable) {
     return null;
   }
 

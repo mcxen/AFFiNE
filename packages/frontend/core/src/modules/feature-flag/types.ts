@@ -1,7 +1,5 @@
 import type { BlockSuiteFlags } from '@blocksuite/affine/shared/services';
 
-type FeedbackType = 'discord' | 'email' | 'github';
-
 export type FlagInfo = {
   displayName: string;
   description?: string;
@@ -11,8 +9,6 @@ export type FlagInfo = {
    * hide in the feature flag settings, but still can be controlled by the code
    */
   hide?: boolean;
-  feedbackType?: FeedbackType;
-  feedbackLink?: string;
 } & (
   | {
       category: 'affine';

@@ -5,15 +5,12 @@ import {
   SettingWrapper,
 } from '@affine/component/setting-components';
 import { useAppUpdater } from '@affine/core/components/hooks/use-app-updater';
-import { UrlService } from '@affine/core/modules/url';
 import { appIconMap, appNames } from '@affine/core/utils/channel';
 import { useI18n } from '@affine/i18n';
-import { ArrowRightSmallIcon, OpenInNewIcon } from '@blocksuite/icons/rc';
-import { useServices } from '@toeverything/infra';
+import { OpenInNewIcon } from '@blocksuite/icons/rc';
 import { useCallback } from 'react';
 
 import { useAppSettingHelper } from '../../../../../components/hooks/affine/use-app-setting-helper';
-import { relatedLinks } from './config';
 import * as styles from './style.css';
 import { UpdateCheckSection } from './update-check-section';
 
@@ -24,9 +21,6 @@ export const AboutAffine = () => {
   const channel = BUILD_CONFIG.appBuildType;
   const appIcon = appIconMap[channel];
   const appName = appNames[channel];
-  const { urlService } = useServices({
-    UrlService,
-  });
 
   const onSwitchAutoCheck = useCallback(
     (checked: boolean) => {
@@ -93,16 +87,6 @@ export const AboutAffine = () => {
                 onChange={onSwitchAutoDownload}
               />
             </SettingRow>
-            <SettingRow
-              name={t['com.affine.aboutAFFiNE.changelog.title']()}
-              desc={t['com.affine.aboutAFFiNE.changelog.description']()}
-              style={{ cursor: 'pointer' }}
-              onClick={() => {
-                urlService.openPopupWindow(BUILD_CONFIG.changelogUrl);
-              }}
-            >
-              <ArrowRightSmallIcon />
-            </SettingRow>
           </>
         ) : null}
         <SettingRow
@@ -125,33 +109,6 @@ export const AboutAffine = () => {
           {t['com.affine.aboutAFFiNE.contact.website']()}
           <OpenInNewIcon className="icon" />
         </a>
-        <a
-          className={styles.link}
-          rel="noreferrer"
-          href="https://affine.pro/redirect/discord"
-          target="_blank"
-        >
-          {t['com.affine.aboutAFFiNE.contact.community']()}
-          <OpenInNewIcon className="icon" />
-        </a>
-      </SettingWrapper>
-      <SettingWrapper title={t['com.affine.aboutAFFiNE.community.title']()}>
-        <div className={styles.communityWrapper}>
-          {relatedLinks.map(({ icon, title, link }) => {
-            return (
-              <div
-                className={styles.communityItem}
-                onClick={() => {
-                  urlService.openPopupWindow(link);
-                }}
-                key={title}
-              >
-                {icon}
-                <p>{title}</p>
-              </div>
-            );
-          })}
-        </div>
       </SettingWrapper>
       <SettingWrapper title={t['com.affine.aboutAFFiNE.legal.title']()}>
         <a

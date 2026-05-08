@@ -33,7 +33,6 @@ class AFFiNEViewController: CAPBridgeViewController {
       HashcashPlugin(),
       NavigationGesturePlugin(),
       NbStorePlugin(),
-      PayWallPlugin(associatedController: self),
       PreviewPlugin(),
     ]
     plugins.forEach { bridge?.registerPluginInstance($0) }

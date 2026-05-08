@@ -19,9 +19,7 @@ export type { PublicUserInfo } from './services/public-user';
 export { PublicUserService } from './services/public-user';
 export { ServerService } from './services/server';
 export { ServersService } from './services/servers';
-export { UserCopilotQuotaService } from './services/user-copilot-quota';
 export { UserFeatureService } from './services/user-feature';
-export { UserQuotaService } from './services/user-quota';
 export {
   type UserSettings,
   UserSettingsService,
@@ -39,9 +37,7 @@ import { WorkspaceScope, WorkspaceService } from '../workspace';
 import { CloudDocMeta } from './entities/cloud-doc-meta';
 import { Server } from './entities/server';
 import { AuthSession } from './entities/session';
-import { UserCopilotQuota } from './entities/user-copilot-quota';
 import { UserFeature } from './entities/user-feature';
-import { UserQuota } from './entities/user-quota';
 import { configureDefaultAuthProvider } from './impl/auth';
 import { AuthProvider } from './provider/auth';
 import { ValidatorProvider } from './provider/validator';
@@ -58,9 +54,7 @@ import { GraphQLService } from './services/graphql';
 import { PublicUserService } from './services/public-user';
 import { ServerService } from './services/server';
 import { ServersService } from './services/servers';
-import { UserCopilotQuotaService } from './services/user-copilot-quota';
 import { UserFeatureService } from './services/user-feature';
-import { UserQuotaService } from './services/user-quota';
 import { UserSettingsService } from './services/user-settings';
 import { WorkspaceServerService } from './services/workspace-server';
 import { AcceptInviteStore } from './stores/accept-invite';
@@ -70,9 +64,7 @@ import { InviteInfoStore } from './stores/invite-info';
 import { PublicUserStore } from './stores/public-user';
 import { ServerConfigStore } from './stores/server-config';
 import { ServerListStore } from './stores/server-list';
-import { UserCopilotQuotaStore } from './stores/user-copilot-quota';
 import { UserFeatureStore } from './stores/user-feature';
-import { UserQuotaStore } from './stores/user-quota';
 import { UserSettingsStore } from './stores/user-settings';
 import { DocCreatedByService } from './services/doc-created-by';
 import { DocUpdatedByService } from './services/doc-updated-by';
@@ -119,16 +111,6 @@ export function configureCloudModule(framework: Framework) {
       AuthProvider,
     ])
     .entity(AuthSession, [AuthStore])
-    .service(UserQuotaService)
-    .store(UserQuotaStore, [GraphQLService])
-    .entity(UserQuota, [AuthService, UserQuotaStore])
-    .service(UserCopilotQuotaService)
-    .store(UserCopilotQuotaStore, [GraphQLService])
-    .entity(UserCopilotQuota, [
-      AuthService,
-      UserCopilotQuotaStore,
-      ServerService,
-    ])
     .service(UserFeatureService)
     .entity(UserFeature, [AuthService, UserFeatureStore])
     .store(UserFeatureStore, [GraphQLService])

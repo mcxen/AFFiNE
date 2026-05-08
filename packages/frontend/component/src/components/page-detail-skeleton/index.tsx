@@ -38,10 +38,8 @@ export const EditorLoading = ({
                 i18nKey="com.affine.error.contact-us"
                 components={{
                   1: (
-                    <a
+                    <span
                       style={{ color: 'var(--affine-primary-color)' }}
-                      href="https://affine.pro/redirect/discord"
-                      target="__blank"
                     />
                   ),
                 }}

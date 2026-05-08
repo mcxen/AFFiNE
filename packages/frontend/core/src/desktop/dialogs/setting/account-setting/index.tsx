@@ -19,10 +19,8 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { AuthService, ServerService } from '../../../../modules/cloud';
 import type { SettingState } from '../types';
-import { AIUsagePanel } from './ai-usage-panel';
 import { DeleteAccount } from './delete-account';
 import { IntegrationsPanel } from './integrations-panel';
-import { StorageProgress } from './storage-progress';
 import * as styles from './style.css';
 
 export const UserAvatar = () => {
@@ -141,28 +139,6 @@ export const AvatarAndName = () => {
   );
 };
 
-const StoragePanel = ({
-  onChangeSettingState,
-}: {
-  onChangeSettingState?: (settingState: SettingState) => void;
-}) => {
-  const t = useI18n();
-
-  const onUpgrade = useCallback(() => {
-    onChangeSettingState?.({ activeTab: 'account' });
-  }, [onChangeSettingState]);
-
-  return (
-    <SettingRow
-      name={t['com.affine.storage.title']()}
-      desc=""
-      spreadCol={false}
-    >
-      <StorageProgress onUpgrade={onUpgrade} />
-    </SettingRow>
-  );
-};
-
 export const AccountSetting = ({
   onChangeSettingState,
 }: {
@@ -173,7 +149,6 @@ export const AccountSetting = ({
     ServerService,
     GlobalDialogService,
   });
-  const serverFeatures = useLiveData(serverService.server.features$);
   const t = useI18n();
   const session = authService.session;
   useEffect(() => {
@@ -231,10 +206,6 @@ export const AccountSetting = ({
               : t['com.affine.settings.password.action.set']()}
           </Button>
         </SettingRow>
-        <StoragePanel onChangeSettingState={onChangeSettingState} />
-        {serverFeatures?.copilot && (
-          <AIUsagePanel onChangeSettingState={onChangeSettingState} />
-        )}
         <IntegrationsPanel onChangeSettingState={onChangeSettingState} />
         <SettingRow
           name={t[`Sign out`]()}

@@ -32,7 +32,6 @@ import {
 } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 
-import { PlanTag } from '../plan-tag';
 import { Scroller } from '../scroller';
 import * as styles from './invite-member-editor.css';
 import { MemberItem } from './member-item';
@@ -52,12 +51,8 @@ const getRoleName = (role: DocRole, t: ReturnType<typeof useI18n>) => {
 };
 
 export const InviteMemberEditor = ({
-  openPaywallModal,
-  hittingPaywall,
   onClickCancel,
 }: {
-  hittingPaywall: boolean;
-  openPaywallModal: () => void;
   onClickCancel: () => void;
 }) => {
   const t = useI18n();
@@ -230,8 +225,6 @@ export const InviteMemberEditor = ({
           </div>
           {!selectedMembers.length ? null : (
             <RoleSelector
-              openPaywallModal={openPaywallModal}
-              hittingPaywall={hittingPaywall}
               inviteDocRoleType={inviteDocRoleType}
               onRoleChange={handleRoleChange}
             />
@@ -329,15 +322,11 @@ const Result = ({
 };
 
 const RoleSelector = ({
-  openPaywallModal,
-  hittingPaywall,
   inviteDocRoleType,
   onRoleChange,
 }: {
-  openPaywallModal: () => void;
   inviteDocRoleType: DocRole;
   onRoleChange: (role: DocRole) => void;
-  hittingPaywall: boolean;
 }) => {
   const t = useI18n();
   const currentRoleName = useMemo(
@@ -350,19 +339,11 @@ const RoleSelector = ({
     [onRoleChange]
   );
   const changeToWrite = useCallback(() => {
-    if (hittingPaywall) {
-      openPaywallModal();
-      return;
-    }
     onRoleChange(DocRole.Editor);
-  }, [hittingPaywall, onRoleChange, openPaywallModal]);
+  }, [onRoleChange]);
   const changeToRead = useCallback(() => {
-    if (hittingPaywall) {
-      openPaywallModal();
-      return;
-    }
     onRoleChange(DocRole.Reader);
-  }, [hittingPaywall, onRoleChange, openPaywallModal]);
+  }, [onRoleChange]);
   return (
     <div className={styles.roleSelectorContainer}>
       <Menu
@@ -383,7 +364,6 @@ const RoleSelector = ({
             >
               <div className={styles.planTagContainer}>
                 {t['com.affine.share-menu.option.permission.can-edit']()}
-                {hittingPaywall ? <PlanTag /> : null}
               </div>
             </MenuItem>
             <MenuItem
@@ -392,7 +372,6 @@ const RoleSelector = ({
             >
               <div className={styles.planTagContainer}>
                 {t['com.affine.share-menu.option.permission.can-read']()}
-                {hittingPaywall ? <PlanTag /> : null}
               </div>
             </MenuItem>
           </>

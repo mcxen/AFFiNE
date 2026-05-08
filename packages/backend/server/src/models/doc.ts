@@ -400,6 +400,19 @@ export class DocModel extends BaseModel {
     })) as Prisma.WorkspaceDocGetPayload<{ select: Select }> | null;
   }
 
+  async deleteMeta(workspaceId: string, docId: string) {
+    await this.db.workspaceDoc.deleteMany({
+      where: {
+        workspaceId,
+        docId,
+      },
+    });
+    this.event.emit('doc.updated', {
+      workspaceId,
+      docId,
+    });
+  }
+
   async setDefaultRole(workspaceId: string, docId: string, role: DocRole) {
     return await this.upsertMeta(workspaceId, docId, {
       defaultRole: role,

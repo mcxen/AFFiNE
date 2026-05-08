@@ -9,8 +9,6 @@ type AppEvents =
   | 'downloadUpdate'
   | 'downloadApp'
   | 'quitAndInstall'
-  | 'openChangelog'
-  | 'dismissChangelog'
   | 'contactUs'
   | 'findInPage';
 type NavigationEvents =
@@ -352,7 +350,7 @@ interface PageEvents extends PageDivision {
       docInfo: ['open'];
       docHistory: ['open'];
       updates: ['quitAndInstall'];
-      help: ['contactUs', 'openChangelog'];
+      help: ['contactUs'];
     };
     navigationPanel: {
       $: ['quickSearch', 'createDoc', 'navigate', 'openSettings', 'toggle'];
@@ -379,12 +377,7 @@ interface PageEvents extends PageDivision {
       tags: ['createDoc', 'tagDoc', 'drop'];
       favorites: ['createDoc', 'drop'];
       migrationData: ['openMigrationDataHelp'];
-      bottomButtons: [
-        'downloadApp',
-        'quitAndInstall',
-        'openChangelog',
-        'dismissChangelog',
-      ];
+      bottomButtons: ['downloadApp', 'quitAndInstall'];
       others: ['navigate'];
       importModal: ['open'];
       workspaceList: [
@@ -405,10 +398,6 @@ interface PageEvents extends PageDivision {
     };
     importModal: {
       $: ['open', 'import', 'createDoc'];
-    };
-    paywall: {
-      storage: ['viewPlans'];
-      aiAction: ['viewPlans'];
     };
     appTabsHeader: {
       $: ['tabAction', 'dragStart'];

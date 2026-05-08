@@ -9,7 +9,9 @@ import {
   MenuSub,
   notify,
 } from '@affine/component';
+import { exportDocsToMarkdownCollection } from '@affine/core/components/hooks/affine/use-export-page';
 import { usePageHelper } from '@affine/core/blocksuite/block-suite-page-list/utils';
+import { DocsService } from '@affine/core/modules/doc';
 import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
 import { CompatibleFavoriteItemsAdapter } from '@affine/core/modules/favorite';
 import { FeatureFlagService } from '@affine/core/modules/feature-flag';
@@ -23,8 +25,10 @@ import type { AffineDNDData } from '@affine/core/types/dnd';
 import { Unreachable } from '@affine/env/constant';
 import { useI18n } from '@affine/i18n';
 import { track } from '@affine/track';
+import type { Store } from '@blocksuite/affine/store';
 import {
   DeleteIcon,
+  ExportToMarkdownIcon,
   FolderIcon,
   PageIcon,
   PlusIcon,
@@ -174,6 +178,18 @@ const NavigationPanelFolderIcon: NavigationPanelTreeNodeIcon = ({
   />
 );
 
+const collectDocIdsFromFolder = (node: FolderNode, docIds: Set<string>) => {
+  for (const child of node.sortedChildren$.value) {
+    const type = child.type$.value;
+    const data = child.data$.value;
+    if (type === 'doc' && data) {
+      docIds.add(data);
+    } else if (type === 'folder') {
+      collectDocIdsFromFolder(child, docIds);
+    }
+  }
+};
+
 const NavigationPanelFolderNodeFolder = ({
   node,
   onDrop,
@@ -189,12 +205,18 @@ const NavigationPanelFolderNodeFolder = ({
   node: FolderNode;
 } & GenericNavigationPanelNode) => {
   const t = useI18n();
-  const { workspaceService, featureFlagService, workspaceDialogService } =
+  const {
+    workspaceService,
+    featureFlagService,
+    workspaceDialogService,
+    docsService,
+  } =
     useServices({
       WorkspaceService,
       CompatibleFavoriteItemsAdapter,
       FeatureFlagService,
       WorkspaceDialogService,
+      DocsService,
     });
   const navigationPanelService = useService(NavigationPanelService);
   const name = useLiveData(node.name$);
@@ -649,6 +671,56 @@ const NavigationPanelFolderNodeFolder = ({
     [children, node, setCollapsed, workspaceDialogService]
   );
 
+  const handleExportFolderAsMarkdown = useCallback(async () => {
+    const docIds = new Set<string>();
+    collectDocIdsFromFolder(node, docIds);
+
+    const docs = [...docIds]
+      .map(docId =>
+        workspaceService.workspace.docCollection
+          .getDoc(docId)
+          ?.getStore({ id: docId })
+      )
+      .filter((doc): doc is Store => !!doc);
+
+    if (docs.length === 0) {
+      notify.error({
+        title: t['com.affine.export.error.title'](),
+        message: t['com.affine.export.error.message'](),
+      });
+      return;
+    }
+
+    try {
+      const editorRoot = document.querySelector('editor-host');
+      const success = await exportDocsToMarkdownCollection({
+        rootDoc: docs[0],
+        docs,
+        docsService,
+        std: editorRoot?.std,
+        fileName: name || 'folder',
+      });
+
+      if (success) {
+        notify.success({
+          title: t['com.affine.export.success.title'](),
+          message: t['com.affine.export.success.message'](),
+        });
+      } else {
+        notify.error({
+          title: t['com.affine.export.error.title'](),
+          message: t['com.affine.export.error.message'](),
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      notify.error({
+        title: t['com.affine.export.error.title'](),
+        message: t['com.affine.export.error.message'](),
+      });
+    }
+  }, [docsService, name, node, t, workspaceService]);
+
   const folderOperations = useMemo(() => {
     return [
       {
@@ -722,6 +794,18 @@ const NavigationPanelFolderNodeFolder = ({
       },
 
       {
+        index: 201,
+        view: (
+          <MenuItem
+            prefixIcon={<ExportToMarkdownIcon />}
+            onClick={handleExportFolderAsMarkdown}
+          >
+            Export as Markdown folder
+          </MenuItem>
+        ),
+      },
+
+      {
         index: 9999,
         view: <MenuSeparator key="menu-separator" />,
       },
@@ -742,6 +826,7 @@ const NavigationPanelFolderNodeFolder = ({
     handleAddToFolder,
     handleCreateSubfolder,
     handleDelete,
+    handleExportFolderAsMarkdown,
     handleNewDoc,
     node,
     t,

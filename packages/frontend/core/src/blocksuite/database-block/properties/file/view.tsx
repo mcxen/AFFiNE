@@ -39,7 +39,6 @@ import {
   useMemo,
 } from 'react';
 
-import { WorkspaceDialogService } from '../../../../modules/dialogs';
 import { useSignalValue } from '../../../../modules/doc-info/utils';
 import type { ImageData } from '../../../../modules/peek-view/view/image-preview';
 import { CircularProgress } from '../../components/loading';
@@ -388,13 +387,6 @@ const FileCellComponent: ForwardRefRenderFunction<
   );
   const fileList = useSignalValue(manager.fileList);
   const isEditing = useSignalValue(manager.isEditing);
-  const workspaceDialogService = useService(WorkspaceDialogService);
-  const jumpToPricePlan = useCallback(() => {
-    workspaceDialogService.open('setting', {
-      activeTab: 'appearance',
-      scrollAnchor: 'cloudPricingPlan',
-    });
-  }, [workspaceDialogService]);
   const renderPopoverContent = () => {
     if (fileList.length === 0) {
       return (
@@ -424,9 +416,6 @@ const FileCellComponent: ForwardRefRenderFunction<
             <div className={styles.fileSizeInfo}>
               The maximum size per file is 100MB
             </div>
-            <a className={styles.upgradeLink} onClick={jumpToPricePlan}>
-              Upgrade to Pro
-            </a>
           </div>
         </div>
       );

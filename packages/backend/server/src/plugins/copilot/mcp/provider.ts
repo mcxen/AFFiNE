@@ -4,7 +4,7 @@ import z from 'zod/v3';
 
 import { DocReader, DocWriter } from '../../../core/doc';
 import { AccessController } from '../../../core/permission';
-import { clearEmbeddingChunk } from '../../../models';
+import { clearEmbeddingChunk, Models } from '../../../models';
 import { IndexerService } from '../../indexer';
 import { CopilotContextService } from '../context/service';
 
@@ -102,12 +102,62 @@ export class WorkspaceMcpProvider {
     private readonly ac: AccessController,
     private readonly reader: DocReader,
     private readonly writer: DocWriter,
+    private readonly models: Models,
     private readonly context: CopilotContextService,
     private readonly indexer: IndexerService
   ) {}
 
   async for(userId: string, workspaceId: string): Promise<WorkspaceMcpServer> {
     await this.ac.user(userId).workspace(workspaceId).assert('Workspace.Read');
+
+    const listDocuments = defineTool({
+      name: 'list_documents',
+      title: 'List Documents',
+      description: 'List readable documents in the workspace.',
+      parser: z.object({
+        limit: z.number().int().min(1).max(100).optional(),
+        offset: z.number().int().min(0).optional(),
+      }),
+      inputSchema: {
+        type: 'object',
+        properties: {
+          limit: {
+            type: 'number',
+            description: 'Maximum number of documents to return, up to 100.',
+          },
+          offset: {
+            type: 'number',
+            description: 'Number of documents to skip.',
+          },
+        },
+        additionalProperties: false,
+      },
+      execute: async ({ limit = 50, offset = 0 }, options) => {
+        const [, rows] = await this.models.doc.paginateDocInfoByUpdatedAt(
+          workspaceId,
+          { first: limit, offset }
+        );
+
+        const abortedAfterList = abortIfNeeded(options.signal);
+        if (abortedAfterList) return abortedAfterList;
+
+        const docs = await this.ac
+          .user(userId)
+          .workspace(workspaceId)
+          .docs(rows, 'Doc.Read');
+
+        const abortedAfterDocs = abortIfNeeded(options.signal);
+        if (abortedAfterDocs) return abortedAfterDocs;
+
+        return toolText(
+          JSON.stringify(
+            docs.map(doc =>
+              pick(doc, 'docId', 'title', 'summary', 'createdAt', 'updatedAt')
+            )
+          )
+        );
+      },
+    });
 
     const readDocument = defineTool({
       name: 'read_document',
@@ -418,13 +468,73 @@ export class WorkspaceMcpProvider {
       },
     });
 
+    const deleteDocument = defineTool({
+      name: 'delete_document',
+      title: 'Delete Document',
+      description:
+        'Delete an existing document from the workspace. This removes the document content and metadata.',
+      parser: z.object({
+        docId: z.string(),
+      }),
+      inputSchema: {
+        type: 'object',
+        properties: {
+          docId: {
+            type: 'string',
+            description: 'The ID of the document to delete',
+          },
+        },
+        required: ['docId'],
+        additionalProperties: false,
+      },
+      execute: async ({ docId }, options) => {
+        const notFoundError = toolError(`Doc with id ${docId} not found.`);
+        if (docId === workspaceId) {
+          return toolError('Cannot delete the workspace root document.');
+        }
+
+        const accessible = await this.ac
+          .user(userId)
+          .workspace(workspaceId)
+          .doc(docId)
+          .can('Doc.Delete');
+        if (!accessible) return notFoundError;
+
+        const existingDoc = await this.reader.getDoc(workspaceId, docId);
+        if (!existingDoc) return notFoundError;
+
+        const abortedBeforeDelete = abortIfNeeded(options.signal);
+        if (abortedBeforeDelete) return abortedBeforeDelete;
+
+        try {
+          await this.models.doc.delete(workspaceId, docId);
+          await this.models.doc.deleteMeta(workspaceId, docId);
+          await this.indexer.deleteDoc(workspaceId, docId);
+
+          return toolText(
+            JSON.stringify({
+              success: true,
+              docId,
+              message: 'Document deleted successfully',
+            })
+          );
+        } catch (error) {
+          return toolError(
+            `Failed to delete document: ${error instanceof Error ? error.message : 'Unknown error'}`
+          );
+        }
+      },
+    });
+
     const tools = [
+      listDocuments,
       readDocument,
       semanticSearch,
       keywordSearch,
       createDocument,
       updateDocument,
       updateDocumentMeta,
+      deleteDocument,
     ];
 
     return {

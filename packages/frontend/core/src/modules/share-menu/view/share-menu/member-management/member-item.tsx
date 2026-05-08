@@ -24,19 +24,14 @@ import { useLiveData, useService } from '@toeverything/infra';
 import clsx from 'clsx';
 import { useCallback, useMemo } from 'react';
 
-import { PlanTag } from '../plan-tag';
 import * as styles from './member-item.css';
 
 export const MemberItem = ({
-  openPaywallModal,
-  hittingPaywall,
   grantedUser,
   canManageUsers,
 }: {
   grantedUser: GrantedUser;
-  hittingPaywall: boolean;
   canManageUsers: boolean;
-  openPaywallModal: () => void;
 }) => {
   const user = grantedUser.user;
   const disableManage = grantedUser.role === DocRole.Owner || !canManageUsers;
@@ -90,14 +85,7 @@ export const MemberItem = ({
         <div className={clsx(styles.memberRoleStyle, 'disable')}>{role}</div>
       ) : (
         <Menu
-          items={
-            <Options
-              userId={user.id}
-              memberRole={grantedUser.role}
-              hittingPaywall={hittingPaywall}
-              openPaywallModal={openPaywallModal}
-            />
-          }
+          items={<Options userId={user.id} memberRole={grantedUser.role} />}
           contentOptions={{
             align: 'start',
           }}
@@ -118,15 +106,11 @@ export const MemberItem = ({
 };
 
 const Options = ({
-  openPaywallModal,
-  hittingPaywall,
   memberRole,
   userId,
 }: {
   userId: string;
   memberRole: DocRole;
-  hittingPaywall: boolean;
-  openPaywallModal: () => void;
 }) => {
   const t = useI18n();
   const docGrantedUsersService = useService(DocGrantedUsersService);
@@ -172,20 +156,12 @@ const Options = ({
   }, [updateUserRole, userId]);
 
   const changeToEditor = useAsyncCallback(async () => {
-    if (hittingPaywall) {
-      openPaywallModal();
-      return;
-    }
     await updateUserRole(userId, DocRole.Editor);
-  }, [hittingPaywall, updateUserRole, userId, openPaywallModal]);
+  }, [updateUserRole, userId]);
 
   const changeToReader = useAsyncCallback(async () => {
-    if (hittingPaywall) {
-      openPaywallModal();
-      return;
-    }
     await updateUserRole(userId, DocRole.Reader);
-  }, [hittingPaywall, updateUserRole, userId, openPaywallModal]);
+  }, [updateUserRole, userId]);
 
   const changeToOwner = useAsyncCallback(async () => {
     await updateUserRole(userId, DocRole.Owner);
@@ -234,16 +210,14 @@ const Options = ({
         label: t['com.affine.share-menu.option.permission.can-edit'](),
         onClick: changeToEditor,
         role: DocRole.Editor,
-        showPlanTag: hittingPaywall,
       },
       {
         label: t['com.affine.share-menu.option.permission.can-read'](),
         onClick: changeToReader,
         role: DocRole.Reader,
-        showPlanTag: hittingPaywall,
       },
     ];
-  }, [changeToEditor, changeToManager, changeToReader, hittingPaywall, t]);
+  }, [changeToEditor, changeToManager, changeToReader, t]);
 
   return (
     <>
@@ -254,9 +228,7 @@ const Options = ({
           selected={memberRole === item.role}
           disabled={!canManageUsers}
         >
-          <div className={styles.planTagContainer}>
-            {item.label} {item.showPlanTag ? <PlanTag /> : null}
-          </div>
+          <div className={styles.planTagContainer}>{item.label}</div>
         </MenuItem>
       ))}
       <MenuItem onSelect={openTransferOwnerModal} disabled={!canTransferOwner}>

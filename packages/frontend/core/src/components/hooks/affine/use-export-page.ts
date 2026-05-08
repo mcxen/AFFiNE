@@ -501,6 +501,84 @@ async function exportAllDocsToMarkdown(
   download(await zip.generate(), `${docTitle}-all-docs.zip`);
 }
 
+export async function exportDocsToMarkdownCollection({
+  rootDoc,
+  docs,
+  docsService,
+  std,
+  fileName,
+}: {
+  rootDoc: Store;
+  docs: Store[];
+  docsService: DocsService;
+  std?: BlockStdScope;
+  fileName: string;
+}) {
+  if (!std) {
+    return false;
+  }
+
+  const transformer = createTransformer(rootDoc);
+  const adapterFactory = std.store.provider.get(
+    MarkdownAdapterFactoryIdentifier
+  );
+  const adapter = adapterFactory.get(transformer);
+  const exportedDocs: ExportedMarkdownDoc[] = [];
+
+  for (const targetDoc of docs) {
+    const loaded = docsService.open(targetDoc.id);
+    const disposePriorityLoad = loaded.doc.addPriorityLoad(10);
+    try {
+      await loaded.doc.waitForSyncReady();
+      const result = (await adapter.fromDoc(targetDoc)) as AdapterResult;
+      if (!result) {
+        continue;
+      }
+      exportedDocs.push({
+        doc: targetDoc,
+        markdown: result.file ?? '',
+        assetsIds: result.assetsIds,
+      });
+    } finally {
+      disposePriorityLoad();
+      loaded.release();
+    }
+  }
+
+  if (exportedDocs.length === 0) {
+    return false;
+  }
+
+  const allAssetsIds = [
+    ...new Set(exportedDocs.flatMap(exportedDoc => exportedDoc.assetsIds)),
+  ];
+  const assets = transformer.assets ?? new Map<string, Blob>();
+  if (
+    await writeMarkdownExportToFolder(
+      exportedDocs,
+      assets,
+      allAssetsIds,
+      rootDoc
+    )
+  ) {
+    return true;
+  }
+
+  const zip = await createAssetsArchive(assets, allAssetsIds);
+  const usedPaths = new Set<string>();
+
+  for (const exportedDoc of exportedDocs) {
+    const path = uniqueMarkdownPath(exportedDoc.doc, usedPaths, false);
+    await zip.file(
+      path,
+      new Blob([exportedDoc.markdown], { type: 'text/plain' })
+    );
+  }
+
+  download(await zip.generate(), `${sanitizeFilename(fileName)}.zip`);
+  return true;
+}
+
 async function exportToHtml(doc: Store, std?: BlockStdScope) {
   if (!std) {
     // If std is not provided, we use the default export method

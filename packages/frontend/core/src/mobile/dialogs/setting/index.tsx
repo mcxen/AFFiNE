@@ -14,7 +14,6 @@ import { OthersGroup } from './others';
 import * as styles from './style.css';
 import { SwipeDialog } from './swipe-dialog';
 import { UserProfile } from './user-profile';
-import { UserUsage } from './user-usage';
 
 const MobileSetting = () => {
   const session = useService(AuthService).session;
@@ -23,7 +22,6 @@ const MobileSetting = () => {
   return (
     <div className={styles.root}>
       <UserProfile />
-      <UserUsage />
       <AppearanceGroup />
       <AboutGroup />
       <ExperimentalFeatureSetting />

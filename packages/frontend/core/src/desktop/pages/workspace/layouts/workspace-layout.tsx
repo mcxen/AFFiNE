@@ -8,24 +8,18 @@ import { AppContainer } from '@affine/core/desktop/components/app-container';
 import { DocumentTitle } from '@affine/core/desktop/components/document-title';
 import { WorkspaceDialogs } from '@affine/core/desktop/dialogs';
 import { PeekViewManagerModal } from '@affine/core/modules/peek-view';
-import { QuotaCheck } from '@affine/core/modules/quota';
 import { WorkbenchService } from '@affine/core/modules/workbench';
-import { WorkspaceService } from '@affine/core/modules/workspace';
 import { LiveData, useLiveData, useService } from '@toeverything/infra';
 import type { PropsWithChildren } from 'react';
 
 export const WorkspaceLayout = function WorkspaceLayout({
   children,
 }: PropsWithChildren) {
-  const currentWorkspace = useService(WorkspaceService).workspace;
   return (
     <SWRConfigProvider>
       <WorkspaceDialogs />
 
       {/* ---- some side-effect components ---- */}
-      {currentWorkspace?.flavour !== 'local' ? (
-        <QuotaCheck workspaceMeta={currentWorkspace.meta} />
-      ) : null}
       <AiLoginRequiredModal />
       <WorkspaceSideEffects />
       <PeekViewManagerModal />

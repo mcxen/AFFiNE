@@ -163,16 +163,6 @@ export const notice = style({
   background: cssVarV2('layer/background/secondary'),
 });
 
-export const locked = style({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 16,
-  padding: 24,
-  borderRadius: 8,
-  background: cssVarV2('layer/background/secondary'),
-  border: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
-});
-
 export const form = style({
   display: 'flex',
   flexDirection: 'column',

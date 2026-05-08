@@ -16,7 +16,6 @@ import {
 import { ExplorerIconService } from '@affine/core/modules/explorer-icon/services/explorer-icon';
 import { OrganizeService } from '@affine/core/modules/organize';
 import { TagService } from '@affine/core/modules/tag';
-import { UrlService } from '@affine/core/modules/url';
 import {
   getAFFiNEWorkspaceSchema,
   type WorkspaceMetadata,
@@ -779,18 +778,6 @@ const ImportOptions = ({
           )
         )}
       </div>
-      <div className={style.importModalTip}>
-        {t['com.affine.import.modal.tip']()}{' '}
-        <a
-          className={style.link}
-          href={BUILD_CONFIG.discordUrl}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Discord
-        </a>
-        .
-      </div>
     </>
   );
 };
@@ -817,16 +804,7 @@ const SuccessStatus = ({ onComplete }: { onComplete: () => void }) => {
         {t['com.affine.import.status.success.title']()}
       </div>
       <p className={style.importStatusContent}>
-        {t['com.affine.import.status.success.message']()}{' '}
-        <a
-          className={style.link}
-          href={BUILD_CONFIG.discordUrl}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Discord
-        </a>
-        .
+        {t['com.affine.import.status.success.message']()}
       </p>
       <div className={style.importModalButtonContainer}>
         <Button onClick={onComplete} variant="primary">
@@ -845,7 +823,6 @@ const ErrorStatus = ({
   onRetry: () => void;
 }) => {
   const t = useI18n();
-  const urlService = useService(UrlService);
   return (
     <>
       <div className={style.importModalTitle}>
@@ -855,14 +832,6 @@ const ErrorStatus = ({
         {error || 'Unknown error occurred'}
       </p>
       <div className={style.importModalButtonContainer}>
-        <Button
-          onClick={() => {
-            urlService.openPopupWindow(BUILD_CONFIG.discordUrl);
-          }}
-          variant="secondary"
-        >
-          {t['Feedback']()}
-        </Button>
         <Button onClick={onRetry} variant="primary">
           {t['Retry']()}
         </Button>

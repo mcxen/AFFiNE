@@ -27,8 +27,6 @@ export interface ShareMenuProps extends PropsWithChildren {
   currentPage: Store;
   onEnableAffineCloud: () => void;
   onOpenShareModal?: (open: boolean) => void;
-  openPaywallModal?: () => void;
-  hittingPaywall?: boolean;
   disabled?: boolean;
   disabledReason?: string;
 }
@@ -48,13 +46,9 @@ export const ShareMenuContent = (props: ShareMenuProps) => {
     setCurrentTab(value as ShareMenuTab);
   }, []);
 
-  const openPaywallModal = useCallback(() => {}, []);
-
   if (currentTab === ShareMenuTab.Members) {
     return (
       <MemberManagement
-        openPaywallModal={openPaywallModal}
-        hittingPaywall={false}
         onClickBack={() => {
           setCurrentTab(ShareMenuTab.Share);
         }}
@@ -67,8 +61,6 @@ export const ShareMenuContent = (props: ShareMenuProps) => {
   if (currentTab === ShareMenuTab.Invite) {
     return (
       <InviteMemberEditor
-        openPaywallModal={openPaywallModal}
-        hittingPaywall={false}
         onClickCancel={() => {
           setCurrentTab(ShareMenuTab.Share);
         }}
@@ -107,8 +99,6 @@ export const ShareMenuContent = (props: ShareMenuProps) => {
         </Tabs.List>
         <Tabs.Content value={ShareMenuTab.Share}>
           <SharePage
-            hittingPaywall={false}
-            openPaywallModal={openPaywallModal}
             onClickInvite={() => {
               setCurrentTab(ShareMenuTab.Invite);
             }}

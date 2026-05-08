@@ -626,14 +626,6 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.aboutAFFiNE.autoDownloadUpdate.title"](): string;
     /**
-      * `View the AFFiNE Changelog.`
-      */
-    ["com.affine.aboutAFFiNE.changelog.description"](): string;
-    /**
-      * `Discover what's new`
-      */
-    ["com.affine.aboutAFFiNE.changelog.title"](): string;
-    /**
       * `Check for update`
       */
     ["com.affine.aboutAFFiNE.checkUpdate.button.check"](): string;
@@ -903,10 +895,6 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.all-pages.header"](): string;
     /**
-      * `Learn more`
-      */
-    ["com.affine.app-sidebar.learn-more"](): string;
-    /**
       * `Star us`
       */
     ["com.affine.app-sidebar.star-us"](): string;
@@ -930,10 +918,6 @@ export function useAFFiNEI18N(): {
       * `Update available`
       */
     ["com.affine.appUpdater.updateAvailable"](): string;
-    /**
-      * `Discover what's new!`
-      */
-    ["com.affine.appUpdater.whatsNew"](): string;
     /**
       * `Customise the appearance of the client.`
       */
@@ -1690,10 +1674,6 @@ export function useAFFiNEI18N(): {
       * `Change translucent UI on the sidebar to`
       */
     ["com.affine.cmdk.affine.translucent-ui-on-the-sidebar.to"](): string;
-    /**
-      * `What's new`
-      */
-    ["com.affine.cmdk.affine.whats-new"](): string;
     /**
       * `Search docs or paste link...`
       */
@@ -2567,22 +2547,6 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.inviteModal.button.cancel"](): string;
     /**
-      * `Maybe later`
-      */
-    ["com.affine.issue-feedback.cancel"](): string;
-    /**
-      * `Create issue on GitHub`
-      */
-    ["com.affine.issue-feedback.confirm"](): string;
-    /**
-      * `Got feedback? We're all ears! Create an issue on GitHub to let us know your thoughts and suggestions`
-      */
-    ["com.affine.issue-feedback.description"](): string;
-    /**
-      * `Share your feedback on GitHub`
-      */
-    ["com.affine.issue-feedback.title"](): string;
-    /**
       * `Journals`
       */
     ["com.affine.journal.app-sidebar-title"](): string;
@@ -2878,14 +2842,6 @@ export function useAFFiNEI18N(): {
       * `Settings`
       */
     ["com.affine.mobile.setting.header-title"](): string;
-    /**
-      * `Star us on GitHub`
-      */
-    ["com.affine.mobile.setting.others.github"](): string;
-    /**
-      * `Discord Group`
-      */
-    ["com.affine.mobile.setting.others.discord"](): string;
     /**
       * `Privacy`
       */
@@ -3523,24 +3479,6 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.payment.ai.benefit.g3-3"](): string;
     /**
-      * `You have purchased AFFiNE AI. The expiration date is {{end}}.`
-      */
-    ["com.affine.payment.ai.billing-tip.end-at"](options: {
-        readonly end: string;
-    }): string;
-    /**
-      * `You have purchased AFFiNE AI. The next payment date is {{due}}.`
-      */
-    ["com.affine.payment.ai.billing-tip.next-bill-at"](options: {
-        readonly due: string;
-    }): string;
-    /**
-      * `Your recent payment failed, the next payment date is {{due}}.`
-      */
-    ["com.affine.payment.billing-tip.past-due"](options: {
-        readonly due: string;
-    }): string;
-    /**
       * `You are currently on the Free plan.`
       */
     ["com.affine.payment.ai.pricing-plan.caption-free"](): string;
@@ -3596,18 +3534,6 @@ export function useAFFiNEI18N(): {
         limit: string;
     }>): string;
     /**
-      * `Active`
-      */
-    ["com.affine.payment.subscription-status.active"](): string;
-    /**
-      * `Past-due bill`
-      */
-    ["com.affine.payment.subscription-status.past-due"](): string;
-    /**
-      * `Trialing`
-      */
-    ["com.affine.payment.subscription-status.trialing"](): string;
-    /**
       * `Unlimited local workspaces`
       */
     ["com.affine.payment.benefit-1"](): string;
@@ -3643,144 +3569,6 @@ export function useAFFiNEI18N(): {
     ["com.affine.payment.benefit-7"](options: {
         readonly capacity: string;
     }): string;
-    /**
-      * `AFFiNE AI`
-      */
-    ["com.affine.payment.billing-setting.ai-plan"](): string;
-    /**
-      * `Purchase`
-      */
-    ["com.affine.payment.billing-setting.ai.purchase"](): string;
-    /**
-      * `Start free trial`
-      */
-    ["com.affine.payment.billing-setting.ai.start-free-trial"](): string;
-    /**
-      * `One-time payment`
-      */
-    ["com.affine.payment.billing-setting.believer.price-caption"](): string;
-    /**
-      * `AFFiNE Cloud`
-      */
-    ["com.affine.payment.billing-setting.believer.title"](): string;
-    /**
-      * `Cancel subscription`
-      */
-    ["com.affine.payment.billing-setting.cancel-subscription"](): string;
-    /**
-      * `Once you canceled subscription you will no longer enjoy the plan benefits.`
-      */
-    ["com.affine.payment.billing-setting.cancel-subscription.description"](): string;
-    /**
-      * `Change plan`
-      */
-    ["com.affine.payment.billing-setting.change-plan"](): string;
-    /**
-      * `AFFiNE Cloud`
-      */
-    ["com.affine.payment.billing-setting.current-plan"](): string;
-    /**
-      * `Expiration date`
-      */
-    ["com.affine.payment.billing-setting.expiration-date"](): string;
-    /**
-      * `Your subscription is valid until {{expirationDate}}`
-      */
-    ["com.affine.payment.billing-setting.expiration-date.description"](options: {
-        readonly expirationDate: string;
-    }): string;
-    /**
-      * `Billing history`
-      */
-    ["com.affine.payment.billing-setting.history"](): string;
-    /**
-      * `Information`
-      */
-    ["com.affine.payment.billing-setting.information"](): string;
-    /**
-      * `month`
-      */
-    ["com.affine.payment.billing-setting.month"](): string;
-    /**
-      * `There are no invoices to display.`
-      */
-    ["com.affine.payment.billing-setting.no-invoice"](): string;
-    /**
-      * `Paid`
-      */
-    ["com.affine.payment.billing-setting.paid"](): string;
-    /**
-      * `Manage payment details`
-      */
-    ["com.affine.payment.billing-setting.payment-method"](): string;
-    /**
-      * `View future and past invoices, update billing information, and change payment methods. Provided by Stripe.`
-      */
-    ["com.affine.payment.billing-setting.payment-method.description"](): string;
-    /**
-      * `Go`
-      */
-    ["com.affine.payment.billing-setting.payment-method.go"](): string;
-    /**
-      * `Renew date`
-      */
-    ["com.affine.payment.billing-setting.renew-date"](): string;
-    /**
-      * `Next billing date: {{renewDate}}`
-      */
-    ["com.affine.payment.billing-setting.renew-date.description"](options: {
-        readonly renewDate: string;
-    }): string;
-    /**
-      * `Due date`
-      */
-    ["com.affine.payment.billing-setting.due-date"](): string;
-    /**
-      * `Your subscription will end on {{dueDate}}`
-      */
-    ["com.affine.payment.billing-setting.due-date.description"](options: {
-        readonly dueDate: string;
-    }): string;
-    /**
-      * `Resume`
-      */
-    ["com.affine.payment.billing-setting.resume-subscription"](): string;
-    /**
-      * `Manage your billing information and invoices`
-      */
-    ["com.affine.payment.billing-setting.subtitle"](): string;
-    /**
-      * `Billing`
-      */
-    ["com.affine.payment.billing-setting.title"](): string;
-    /**
-      * `Update`
-      */
-    ["com.affine.payment.billing-setting.update"](): string;
-    /**
-      * `Upgrade`
-      */
-    ["com.affine.payment.billing-setting.upgrade"](): string;
-    /**
-      * `View invoice`
-      */
-    ["com.affine.payment.billing-setting.view-invoice"](): string;
-    /**
-      * `year`
-      */
-    ["com.affine.payment.billing-setting.year"](): string;
-    /**
-      * `Please tell us more about your use case, to make AFFiNE better.`
-      */
-    ["com.affine.payment.billing-type-form.description"](): string;
-    /**
-      * `Go`
-      */
-    ["com.affine.payment.billing-type-form.go"](): string;
-    /**
-      * `Tell us your use case`
-      */
-    ["com.affine.payment.billing-type-form.title"](): string;
     /**
       * `You have reached the limit`
       */
@@ -3882,110 +3670,6 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.payment.cloud.pricing-plan.toggle-yearly"](): string;
     /**
-      * `Include in Pro`
-      */
-    ["com.affine.payment.cloud.pro.benefit.g1"](): string;
-    /**
-      * `Everything in AFFiNE FOSS & Basic.`
-      */
-    ["com.affine.payment.cloud.pro.benefit.g1-1"](): string;
-    /**
-      * `100 GB of cloud storage.`
-      */
-    ["com.affine.payment.cloud.pro.benefit.g1-2"](): string;
-    /**
-      * `100 MB of maximum file size.`
-      */
-    ["com.affine.payment.cloud.pro.benefit.g1-3"](): string;
-    /**
-      * `Up to 10 members per workspace.`
-      */
-    ["com.affine.payment.cloud.pro.benefit.g1-4"](): string;
-    /**
-      * `30-days cloud time machine file version history.`
-      */
-    ["com.affine.payment.cloud.pro.benefit.g1-5"](): string;
-    /**
-      * `Add comments on Doc and Edgeless.`
-      */
-    ["com.affine.payment.cloud.pro.benefit.g1-6"](): string;
-    /**
-      * `Community support.`
-      */
-    ["com.affine.payment.cloud.pro.benefit.g1-7"](): string;
-    /**
-      * `Real-time syncing & collaboration for more people.`
-      */
-    ["com.affine.payment.cloud.pro.benefit.g1-8"](): string;
-    /**
-      * `Granular edit access to docs.`
-      */
-    ["com.affine.payment.cloud.pro.benefit.g1-9"](): string;
-    /**
-      * `For family and small teams.`
-      */
-    ["com.affine.payment.cloud.pro.description"](): string;
-    /**
-      * `Pro`
-      */
-    ["com.affine.payment.cloud.pro.name"](): string;
-    /**
-      * `annually`
-      */
-    ["com.affine.payment.cloud.pro.title.billed-yearly"](): string;
-    /**
-      * `{{price}} per month`
-      */
-    ["com.affine.payment.cloud.pro.title.price-monthly"](options: {
-        readonly price: string;
-    }): string;
-    /**
-      * `Include in Team Workspace`
-      */
-    ["com.affine.payment.cloud.team-workspace.benefit.g1"](): string;
-    /**
-      * `Everything in AFFiNE Pro.`
-      */
-    ["com.affine.payment.cloud.team-workspace.benefit.g1-1"](): string;
-    /**
-      * `100 GB initial storage + 20 GB per seat.`
-      */
-    ["com.affine.payment.cloud.team-workspace.benefit.g1-2"](): string;
-    /**
-      * `500 MB of maximum file size.`
-      */
-    ["com.affine.payment.cloud.team-workspace.benefit.g1-3"](): string;
-    /**
-      * `Unlimited team members (10+ seats).`
-      */
-    ["com.affine.payment.cloud.team-workspace.benefit.g1-4"](): string;
-    /**
-      * `Multiple admin roles.`
-      */
-    ["com.affine.payment.cloud.team-workspace.benefit.g1-5"](): string;
-    /**
-      * `Priority customer support.`
-      */
-    ["com.affine.payment.cloud.team-workspace.benefit.g1-6"](): string;
-    /**
-      * `Best for scalable teams.`
-      */
-    ["com.affine.payment.cloud.team-workspace.description"](): string;
-    /**
-      * `Team`
-      */
-    ["com.affine.payment.cloud.team-workspace.name"](): string;
-    /**
-      * `annually`
-      */
-    ["com.affine.payment.cloud.team-workspace.title.billed-yearly"](): string;
-    /**
-      * `{{price}} per seat/month`
-      */
-    ["com.affine.payment.cloud.team-workspace.title.price-monthly"](options: {
-        readonly price: string;
-    }): string;
-    /**
       * `Contact sales`
       */
     ["com.affine.payment.contact-sales"](): string;
@@ -4052,10 +3736,6 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.payment.dynamic-benefit-5"](): string;
     /**
-      * `Everything in AFFiNE Pro`
-      */
-    ["com.affine.payment.lifetime.benefit-1"](): string;
-    /**
       * `Life-time personal usage`
       */
     ["com.affine.payment.lifetime.benefit-2"](): string;
@@ -4065,10 +3745,6 @@ export function useAFFiNEI18N(): {
     ["com.affine.payment.lifetime.benefit-3"](options: {
         readonly capacity: string;
     }): string;
-    /**
-      * `Dedicated Discord support with AFFiNE makers`
-      */
-    ["com.affine.payment.lifetime.benefit-4"](): string;
     /**
       * `Become a Life-time supporter?`
       */
@@ -4085,37 +3761,6 @@ export function useAFFiNEI18N(): {
       * `Believer Plan`
       */
     ["com.affine.payment.lifetime.title"](): string;
-    /**
-      * `Upgrade`
-      */
-    ["com.affine.payment.member-limit.free.confirm"](): string;
-    /**
-      * `Workspaces created by {{planName}} users are limited to {{quota}} members. To add more collaborators, you can:`
-      */
-    ["com.affine.payment.member-limit.description"](options: Readonly<{
-        planName: string;
-        quota: string;
-    }>): string;
-    /**
-      * `Upgrade to AFFiNE Pro for expanded member capacity`
-      */
-    ["com.affine.payment.member-limit.description.tips-for-free-plan"](): string;
-    /**
-      * `Convert to a Team Workspace for unlimited collaboration`
-      */
-    ["com.affine.payment.member-limit.description.tips-1"](): string;
-    /**
-      * `Or create a new workspace`
-      */
-    ["com.affine.payment.member-limit.description.tips-2"](): string;
-    /**
-      * `Got it`
-      */
-    ["com.affine.payment.member-limit.pro.confirm"](): string;
-    /**
-      * `You have reached the limit`
-      */
-    ["com.affine.payment.member-limit.title"](): string;
     /**
       * `Manage members here. {{planName}} users can invite up to {{memberLimit}}`
       */
@@ -4658,14 +4303,6 @@ export function useAFFiNEI18N(): {
       * `Show all viewers`
       */
     ["com.affine.doc.analytics.viewers.show-all"](): string;
-    /**
-      * `Open pricing plans`
-      */
-    ["com.affine.doc.analytics.paywall.open-pricing"](): string;
-    /**
-      * `Doc analytics over 7 days require an AFFiNE Team subscription.`
-      */
-    ["com.affine.doc.analytics.paywall.toast"](): string;
     /**
       * `Close`
       */
@@ -5776,10 +5413,6 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.settings.meetings.setting.prompt"](): string;
     /**
-      * `Learn more`
-      */
-    ["com.affine.settings.meetings.setting.welcome.learn-more"](): string;
-    /**
       * `Enable meeting notes`
       */
     ["com.affine.settings.meetings.enable.title"](): string;
@@ -5919,14 +5552,6 @@ export function useAFFiNEI18N(): {
       * `Use workspace provider keys before AFFiNE AI plan routes.`
       */
     ["com.affine.settings.workspace.byok.header"](): string;
-    /**
-      * `BYOK requires Pro, Team, or Believer`
-      */
-    ["com.affine.settings.workspace.byok.locked.title"](): string;
-    /**
-      * `Upgrade this workspace to add provider keys and route AFFiNE AI through your own OpenAI, Anthropic, Gemini, or FAL account.`
-      */
-    ["com.affine.settings.workspace.byok.locked.description"](): string;
     /**
       * `AI plan stays available`
       */
@@ -6530,42 +6155,6 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.settings.workspace.preferences"](): string;
     /**
-      * `Team's Billing`
-      */
-    ["com.affine.settings.workspace.billing"](): string;
-    /**
-      * `Team Workspace`
-      */
-    ["com.affine.settings.workspace.billing.team-workspace"](): string;
-    /**
-      * `Your workspace is in a free trail period.`
-      */
-    ["com.affine.settings.workspace.billing.team-workspace.description.free-trail"](): string;
-    /**
-      * `Your workspace is billed annually.`
-      */
-    ["com.affine.settings.workspace.billing.team-workspace.description.billed.annually"](): string;
-    /**
-      * `Your workspace is billed monthly.`
-      */
-    ["com.affine.settings.workspace.billing.team-workspace.description.billed.monthly"](): string;
-    /**
-      * `Your subscription will end on {{date}}`
-      */
-    ["com.affine.settings.workspace.billing.team-workspace.not-renewed"](options: {
-        readonly date: string;
-    }): string;
-    /**
-      * `Next billing date: {{date}}`
-      */
-    ["com.affine.settings.workspace.billing.team-workspace.next-billing-date"](options: {
-        readonly date: string;
-    }): string;
-    /**
-      * `Cancel Plan`
-      */
-    ["com.affine.settings.workspace.billing.team-workspace.cancel-plan"](): string;
-    /**
       * `License`
       */
     ["com.affine.settings.workspace.license"](): string;
@@ -6573,43 +6162,6 @@ export function useAFFiNEI18N(): {
       * `Manage license information and invoices for the self host team workspace.`
       */
     ["com.affine.settings.workspace.license.description"](): string;
-    /**
-      * `Get teams plan for your self hosted workspace.`
-      */
-    ["com.affine.settings.workspace.license.benefit.team.title"](): string;
-    /**
-      * `Need more seats? Best for scalable teams.`
-      */
-    ["com.affine.settings.workspace.license.benefit.team.subtitle"](): string;
-    /**
-      * `Everything in Self Hosted FOSS`
-      */
-    ["com.affine.settings.workspace.license.benefit.team.g1"](): string;
-    /**
-      * `{{initialQuota}} initial storage + {{quotaPerSeat}} per seat`
-      */
-    ["com.affine.settings.workspace.license.benefit.team.g2"](options: Readonly<{
-        initialQuota: string;
-        quotaPerSeat: string;
-    }>): string;
-    /**
-      * `{{quota}} of maximum file size`
-      */
-    ["com.affine.settings.workspace.license.benefit.team.g3"](options: {
-        readonly quota: string;
-    }): string;
-    /**
-      * `Unlimited team members (10+ seats)`
-      */
-    ["com.affine.settings.workspace.license.benefit.team.g4"](): string;
-    /**
-      * `Multiple admin roles`
-      */
-    ["com.affine.settings.workspace.license.benefit.team.g5"](): string;
-    /**
-      * `Priority customer support`
-      */
-    ["com.affine.settings.workspace.license.benefit.team.g6"](): string;
     /**
       * `Lean more`
       */
@@ -7216,30 +6768,6 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.share-menu.invite-editor.sent-email"](): string;
     /**
-      * `Permission not available in Free plan`
-      */
-    ["com.affine.share-menu.paywall.owner.title"](): string;
-    /**
-      * `Upgrade to Pro or higher to unlock permission settings for this doc.`
-      */
-    ["com.affine.share-menu.paywall.owner.description"](): string;
-    /**
-      * `Upgrade`
-      */
-    ["com.affine.share-menu.paywall.owner.confirm"](): string;
-    /**
-      * `Permission requires a workspace upgrade`
-      */
-    ["com.affine.share-menu.paywall.member.title"](): string;
-    /**
-      * `Ask your workspace owner to upgrade to Pro or higher to enable permissions.`
-      */
-    ["com.affine.share-menu.paywall.member.description"](): string;
-    /**
-      * `Got it`
-      */
-    ["com.affine.share-menu.paywall.member.confirm"](): string;
-    /**
       * `Built with`
       */
     ["com.affine.share-page.footer.built-with"](): string;
@@ -7299,22 +6827,6 @@ export function useAFFiNEI18N(): {
       * `Once enabled you can find the Snapshot Export Import option in the document's More menu.`
       */
     ["com.affine.snapshot.import-export.enable.desc"](): string;
-    /**
-      * `Maybe later`
-      */
-    ["com.affine.star-affine.cancel"](): string;
-    /**
-      * `Star on GitHub`
-      */
-    ["com.affine.star-affine.confirm"](): string;
-    /**
-      * `Are you finding our app useful and enjoyable? We'd love your support to keep improving! A great way to help us out is by giving us a star on GitHub. This simple action can make a big difference and helps us continue to deliver the best experience for you.`
-      */
-    ["com.affine.star-affine.description"](): string;
-    /**
-      * `Star us on GitHub`
-      */
-    ["com.affine.star-affine.title"](): string;
     /**
       * `Change plan`
       */
@@ -8986,18 +8498,6 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.comment.filter.only-current-mode"](): string;
     /**
-      * `Unlock more features`
-      */
-    ["com.affine.payment.subscription.title"](): string;
-    /**
-      * `The universal editor that lets you work, play, present or create just about anything.`
-      */
-    ["com.affine.payment.subscription.description"](): string;
-    /**
-      * `Upgrade`
-      */
-    ["com.affine.payment.subscription.button"](): string;
-    /**
       * `Reply`
       */
     ["com.affine.comment.reply"](): string;
@@ -9376,78 +8876,6 @@ export function useAFFiNEI18N(): {
         readonly spaceId: string;
     }): string;
     /**
-      * `Unsupported subscription plan: {{plan}}.`
-      */
-    ["error.UNSUPPORTED_SUBSCRIPTION_PLAN"](options: {
-        readonly plan: string;
-    }): string;
-    /**
-      * `Failed to create checkout session.`
-      */
-    ["error.FAILED_TO_CHECKOUT"](): string;
-    /**
-      * `Invalid checkout parameters provided.`
-      */
-    ["error.INVALID_CHECKOUT_PARAMETERS"](): string;
-    /**
-      * `You have already subscribed to the {{plan}} plan.`
-      */
-    ["error.SUBSCRIPTION_ALREADY_EXISTS"](options: {
-        readonly plan: string;
-    }): string;
-    /**
-      * `Invalid subscription parameters provided.`
-      */
-    ["error.INVALID_SUBSCRIPTION_PARAMETERS"](): string;
-    /**
-      * `You didn't subscribe to the {{plan}} plan.`
-      */
-    ["error.SUBSCRIPTION_NOT_EXISTS"](options: {
-        readonly plan: string;
-    }): string;
-    /**
-      * `Your subscription has already been canceled.`
-      */
-    ["error.SUBSCRIPTION_HAS_BEEN_CANCELED"](): string;
-    /**
-      * `Your subscription has not been canceled.`
-      */
-    ["error.SUBSCRIPTION_HAS_NOT_BEEN_CANCELED"](): string;
-    /**
-      * `Your subscription has expired.`
-      */
-    ["error.SUBSCRIPTION_EXPIRED"](): string;
-    /**
-      * `Your subscription has already been in {{recurring}} recurring state.`
-      */
-    ["error.SAME_SUBSCRIPTION_RECURRING"](options: {
-        readonly recurring: string;
-    }): string;
-    /**
-      * `Failed to create customer portal session.`
-      */
-    ["error.CUSTOMER_PORTAL_CREATE_FAILED"](): string;
-    /**
-      * `You are trying to access a unknown subscription plan.`
-      */
-    ["error.SUBSCRIPTION_PLAN_NOT_FOUND"](): string;
-    /**
-      * `You cannot update an onetime payment subscription.`
-      */
-    ["error.CANT_UPDATE_ONETIME_PAYMENT_SUBSCRIPTION"](): string;
-    /**
-      * `A workspace is required to checkout for team subscription.`
-      */
-    ["error.WORKSPACE_ID_REQUIRED_FOR_TEAM_SUBSCRIPTION"](): string;
-    /**
-      * `Workspace id is required to update team subscription.`
-      */
-    ["error.WORKSPACE_ID_REQUIRED_TO_UPDATE_TEAM_SUBSCRIPTION"](): string;
-    /**
-      * `This subscription is managed by App Store or Google Play. Please manage it in the corresponding store.`
-      */
-    ["error.MANAGED_BY_APP_STORE_OR_PLAY"](): string;
-    /**
       * `Calendar provider request error, status: {{status}}, message: {{message}}`
       */
     ["error.CALENDAR_PROVIDER_REQUEST_ERROR"](options: Readonly<{
@@ -9651,7 +9079,7 @@ export function useAFFiNEI18N(): {
       */
     ["error.INVALID_LICENSE_SESSION_ID"](): string;
     /**
-      * `License key has been revealed. Please check your mail box of the one provided during checkout.`
+      * `License key has been revealed. Please check the mailbox used for the license request.`
       */
     ["error.LICENSE_REVEALED"](): string;
     /**
@@ -9957,50 +9385,6 @@ export const TypedTrans: {
         ["0"]: JSX.Element;
     }>>;
     /**
-      * `You are currently on the <a>free plan</a>.`
-      */
-    ["com.affine.payment.billing-setting.ai.free-desc"]: ComponentType<TypedTransProps<Readonly<{}>, {
-        a: JSX.Element;
-    }>>;
-    /**
-      * `You have purchased <a>Believer plan</a>. Enjoy with your benefits!`
-      */
-    ["com.affine.payment.billing-setting.believer.description"]: ComponentType<TypedTransProps<Readonly<{}>, {
-        a: JSX.Element;
-    }>>;
-    /**
-      * `You are currently on the <1>{{planName}} plan</1>.`
-      */
-    ["com.affine.payment.billing-setting.current-plan.description"]: ComponentType<TypedTransProps<{
-        readonly planName: string;
-    }, {
-        ["1"]: JSX.Element;
-    }>>;
-    /**
-      * `You are currently on the believer <1>{{planName}} plan</1>.`
-      */
-    ["com.affine.payment.billing-setting.current-plan.description.lifetime"]: ComponentType<TypedTransProps<{
-        readonly planName: string;
-    }, {
-        ["1"]: JSX.Element;
-    }>>;
-    /**
-      * `You are currently on the monthly <1>{{planName}} plan</1>.`
-      */
-    ["com.affine.payment.billing-setting.current-plan.description.monthly"]: ComponentType<TypedTransProps<{
-        readonly planName: string;
-    }, {
-        ["1"]: JSX.Element;
-    }>>;
-    /**
-      * `You are currently on the annually <1>{{planName}} plan</1>.`
-      */
-    ["com.affine.payment.billing-setting.current-plan.description.yearly"]: ComponentType<TypedTransProps<{
-        readonly planName: string;
-    }, {
-        ["1"]: JSX.Element;
-    }>>;
-    /**
       * `One-time Purchase. Personal use rights for up to 150 years. <a>Fair Usage Policies</a> may apply.`
       */
     ["com.affine.payment.lifetime.caption-2"]: ComponentType<TypedTransProps<Readonly<{}>, {
@@ -10077,13 +9461,6 @@ export const TypedTrans: {
       */
     ["com.affine.settings.editorSettings.general.spell-check.restart-hint"]: ComponentType<TypedTransProps<Readonly<{}>, {
         ["1"]: JSX.Element;
-    }>>;
-    /**
-      * `Love our app? <1>Star us on GitHub</1> and <2>create issues</2> for your valuable feedback!`
-      */
-    ["com.affine.settings.suggestion-2"]: ComponentType<TypedTransProps<Readonly<{}>, {
-        ["1"]: JSX.Element;
-        ["2"]: JSX.Element;
     }>>;
     /**
       * `Meeting Features Available <strong>Free</strong> in Beta Phase`
