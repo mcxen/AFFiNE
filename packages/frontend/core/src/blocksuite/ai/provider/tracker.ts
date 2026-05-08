@@ -188,8 +188,6 @@ function inferControl(
 ): AIActionEventProperties['control'] {
   if (event.event === 'aborted:stop') {
     return 'stop button';
-  } else if (event.event === 'aborted:usage-limit') {
-    return 'usage limit';
   } else if (event.event === 'aborted:server-error') {
     return 'server error';
   } else if (event.event === 'aborted:login-required') {

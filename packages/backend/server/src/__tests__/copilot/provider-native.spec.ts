@@ -3,11 +3,7 @@ import test from 'ava';
 import Sinon from 'sinon';
 import { z } from 'zod';
 
-import {
-  CopilotPromptInvalid,
-  CopilotQuotaExceeded,
-  NoCopilotProviderAvailable,
-} from '../../base';
+import { CopilotPromptInvalid, NoCopilotProviderAvailable } from '../../base';
 import {
   type LlmBackendConfig,
   type LlmEmbeddingRequest,
@@ -975,15 +971,15 @@ test('CopilotProviderFactory should return no prepared routes when native prepar
         openai: { apiKey: 'test-key' },
       }),
   };
-  const server = {
-    enableFeature: Sinon.stub(),
-    disableFeature: Sinon.stub(),
-  };
   const access = {
     resolveRouteAccess: Sinon.stub().resolves({
       byokProfiles: [],
       quotaBackedRoutesAvailable: true,
     }),
+  };
+  const server = {
+    enableFeature: Sinon.stub(),
+    disableFeature: Sinon.stub(),
   };
   const factory = new CopilotProviderFactory(
     server as never,
@@ -1474,15 +1470,15 @@ test('CopilotProviderFactory should resolve legacy model ids through native regi
         openai: { apiKey: 'test-key' },
       }),
   };
-  const server = {
-    enableFeature: Sinon.stub(),
-    disableFeature: Sinon.stub(),
-  };
   const access = {
     resolveRouteAccess: Sinon.stub().resolves({
       byokProfiles: [],
       quotaBackedRoutesAvailable: true,
     }),
+  };
+  const server = {
+    enableFeature: Sinon.stub(),
+    disableFeature: Sinon.stub(),
   };
   const factory = new CopilotProviderFactory(
     server as never,
@@ -1512,10 +1508,8 @@ const BYOK_FAL_PROFILE: CopilotProviderProfile = {
 
 function createProviderFactoryWithByokRoutes({
   byokProfiles = [BYOK_OPENAI_PROFILE],
-  hasQuota = true,
 }: {
   byokProfiles?: CopilotProviderProfile[];
-  hasQuota?: boolean;
 } = {}) {
   const provider = createProvider();
   const registryService = {
@@ -1532,18 +1526,18 @@ function createProviderFactoryWithByokRoutes({
         defaults: {},
       }),
   };
-  const server = {
-    enableFeature: Sinon.stub(),
-    disableFeature: Sinon.stub(),
-  };
   const byok = {
     getProfiles: Sinon.stub().resolves(byokProfiles),
   };
   const access = {
     resolveRouteAccess: Sinon.stub().callsFake(async context => ({
       byokProfiles: await byok.getProfiles(context),
-      quotaBackedRoutesAvailable: context.quotaBackedRoutesAllowed ?? hasQuota,
+      quotaBackedRoutesAvailable: context.quotaBackedRoutesAllowed ?? true,
     })),
+  };
+  const server = {
+    enableFeature: Sinon.stub(),
+    disableFeature: Sinon.stub(),
   };
   const factory = new CopilotProviderFactory(
     server as never,
@@ -1670,8 +1664,8 @@ test('CopilotProviderFactory should treat image preparation as image feature by 
   });
 });
 
-test('CopilotProviderFactory should omit quota-backed routes when quota is exhausted', async t => {
-  const { factory } = createProviderFactoryWithByokRoutes({ hasQuota: false });
+test('CopilotProviderFactory should prefer BYOK routes without quota checks', async t => {
+  const { factory } = createProviderFactoryWithByokRoutes();
 
   const routes = await factory.resolveRoutes(
     { modelId: 'gpt-5-mini', outputType: ModelOutputType.Text },
@@ -1685,26 +1679,26 @@ test('CopilotProviderFactory should omit quota-backed routes when quota is exhau
   );
 });
 
-test('CopilotProviderFactory should raise quota exceeded when only quota-backed routes match', async t => {
+test('CopilotProviderFactory should use quota-backed routes when only they match', async t => {
   const { factory } = createProviderFactoryWithByokRoutes({
     byokProfiles: [],
-    hasQuota: false,
   });
 
-  await t.throwsAsync(
-    factory.resolveRoutes(
-      { modelId: 'gpt-5-mini', outputType: ModelOutputType.Text },
-      {},
-      { userId: 'user-1', workspaceId: 'workspace-1' }
-    ),
-    { instanceOf: CopilotQuotaExceeded }
+  const routes = await factory.resolveRoutes(
+    { modelId: 'gpt-5-mini', outputType: ModelOutputType.Text },
+    {},
+    { userId: 'user-1', workspaceId: 'workspace-1' }
+  );
+
+  t.deepEqual(
+    routes.map(route => route.providerId),
+    ['openai-main']
   );
 });
 
 test('CopilotProviderFactory should not report quota exhausted when quota-backed routes are disabled', async t => {
   const { factory } = createProviderFactoryWithByokRoutes({
     byokProfiles: [],
-    hasQuota: true,
   });
 
   const routes = await factory.resolveRoutes(
@@ -1720,19 +1714,16 @@ test('CopilotProviderFactory should not report quota exhausted when quota-backed
   t.deepEqual(routes, []);
 });
 
-test('selectModel should reject unknown models without online fallback', t => {
+test('selectModel should accept custom model ids', t => {
   const provider = new TestOpenAIProvider();
-  t.is(provider.resolveModel('online-preview'), undefined);
+  t.is(provider.resolveModel('online-preview')?.id, 'online-preview');
 
-  const error = t.throws(() =>
-    provider.selectModel({
-      modelId: 'online-preview',
-      outputType: ModelOutputType.Text,
-    })
-  );
+  const model = provider.selectModel({
+    modelId: 'online-preview',
+    outputType: ModelOutputType.Text,
+  });
 
-  t.truthy(error);
-  t.regex((error as Error).message, /does not support|No model supports/);
+  t.is(model.id, 'online-preview');
 });
 
 test('OpenAI oldApiStyle should resolve chat backend variants from native registry', async t => {

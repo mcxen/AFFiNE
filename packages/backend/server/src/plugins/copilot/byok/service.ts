@@ -593,6 +593,10 @@ export class ByokService {
     const apiKey = this.crypto.decrypt(encryptedApiKey);
     switch (provider) {
       case ByokProvider.openai:
+        return {
+          apiKey,
+          ...(endpoint ? { baseURL: endpoint, oldApiStyle: true } : {}),
+        };
       case ByokProvider.gemini:
       case ByokProvider.anthropic:
         return { apiKey, ...(endpoint ? { baseURL: endpoint } : {}) };
@@ -715,13 +719,12 @@ export class ByokService {
       {
         featureKind: 'transcript',
         reason:
-          'Transcript and workspace indexing require a server Gemini BYOK key or AFFiNE AI plan fallback.',
+          'Transcript and workspace indexing require a server Gemini BYOK key.',
         requiredProviders: [ByokProvider.gemini],
       },
       {
         featureKind: 'workspace_indexing',
-        reason:
-          'Workspace indexing requires a server Gemini BYOK key or AFFiNE AI plan fallback.',
+        reason: 'Workspace indexing requires a server Gemini BYOK key.',
         requiredProviders: [ByokProvider.gemini],
       },
     ];

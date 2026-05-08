@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 
-import { CopilotQuotaExceeded } from '../../../base';
 import type { Turn } from '../core';
 import type { ResolvedPrompt } from '../prompt';
 
@@ -17,9 +16,7 @@ export class ConversationPolicy {
   }
 
   async checkQuota(userId: string) {
-    if (!(await this.hasQuota(userId))) {
-      throw new CopilotQuotaExceeded();
-    }
+    void userId;
   }
 
   async hasQuota(userId: string) {

@@ -58,6 +58,83 @@ function unique<T>(values: Iterable<T>) {
   return Array.from(new Set(values));
 }
 
+function createCustomModelRoute(
+  backendKind: CopilotModelBackendKind
+): Pick<ResolvedProviderModel, 'protocol' | 'requestLayer'> | undefined {
+  switch (backendKind) {
+    case 'openai_chat':
+      return { protocol: 'openai_chat', requestLayer: 'chat_completions' };
+    case 'openai_responses':
+      return { protocol: 'openai_responses', requestLayer: 'responses' };
+    case 'anthropic':
+      return { protocol: 'anthropic', requestLayer: 'anthropic' };
+    case 'anthropic_vertex':
+      return { protocol: 'anthropic', requestLayer: 'vertex_anthropic' };
+    case 'cloudflare_workers_ai':
+      return {
+        protocol: 'openai_chat',
+        requestLayer: 'cloudflare_workers_ai',
+      };
+    case 'gemini_api':
+      return { protocol: 'gemini', requestLayer: 'gemini_api' };
+    case 'gemini_vertex':
+      return { protocol: 'gemini', requestLayer: 'gemini_vertex' };
+    case 'fal':
+      return { protocol: 'fal_image', requestLayer: 'fal' };
+    default:
+      return;
+  }
+}
+
+function createCustomProviderModel(
+  context: ProviderModelRuntimeContext,
+  modelId: string
+): ResolvedProviderModel | undefined {
+  const route = createCustomModelRoute(context.backendKind);
+  if (!route) return;
+
+  const imageAttachment: ModelAttachmentCapability = {
+    kinds: [ModelInputType.Image],
+    sourceKinds: ['url', 'data', 'bytes'],
+    allowRemoteUrls: true,
+  };
+  const textOutputs = [
+    ModelOutputType.Text,
+    ModelOutputType.Object,
+    ModelOutputType.Structured,
+  ];
+  const capabilities: ModelCapability[] =
+    context.backendKind === 'fal'
+      ? [
+          {
+            input: [ModelInputType.Text, ModelInputType.Image],
+            output: [ModelOutputType.Image],
+            attachments: imageAttachment,
+          },
+        ]
+      : [
+          {
+            input: [ModelInputType.Text],
+            output: textOutputs,
+          },
+          {
+            input: [ModelInputType.Text, ModelInputType.Image],
+            output: textOutputs,
+            attachments: imageAttachment,
+            structuredAttachments: imageAttachment,
+          },
+        ];
+
+  return {
+    id: modelId,
+    name: modelId,
+    backendKind: context.backendKind,
+    canonicalKey: modelId,
+    ...route,
+    capabilities,
+  };
+}
+
 function resolveAttachmentCapability(
   cap: ModelCapability,
   outputType?: ModelOutputType
@@ -123,11 +200,11 @@ export function resolveProviderModelSelection(
       backendKind: context.backendKind,
       modelId: cond.modelId,
     }).variant;
-    if (!resolved) {
-      return;
-    }
+    const model = resolved
+      ? toProviderModel(resolved)
+      : createCustomProviderModel(context, cond.modelId);
+    if (!model) return;
 
-    const model = toProviderModel(resolved);
     const matchedModelId = llmMatchModelCapabilities([model], {
       ...cond,
       modelId: model.id,

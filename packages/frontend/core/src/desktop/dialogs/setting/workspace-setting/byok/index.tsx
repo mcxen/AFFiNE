@@ -3,6 +3,10 @@ import {
   SettingHeader,
   SettingWrapper,
 } from '@affine/component/setting-components';
+import {
+  AI_CUSTOM_MODEL_ID_KEY,
+  AIModelService,
+} from '@affine/core/modules/ai-button/services/models';
 import { WorkspaceServerService } from '@affine/core/modules/cloud';
 import { GlobalStateService } from '@affine/core/modules/storage';
 import { WorkspaceService } from '@affine/core/modules/workspace';
@@ -40,8 +44,6 @@ import type {
 } from './types';
 import { UsagePanel } from './usage';
 
-const AI_CUSTOM_MODEL_ID_KEY = 'AICustomModelId';
-
 const LOCAL_BYOK_SETTINGS = {
   workspaceId: '',
   entitled: true,
@@ -72,6 +74,7 @@ export const WorkspaceByokSetting = () => {
   const workspace = useService(WorkspaceService).workspace;
   const workspaceServer = useService(WorkspaceServerService);
   const globalState = useService(GlobalStateService).globalState;
+  const aiModelService = useService(AIModelService);
   const [settings, setSettings] = useState<ByokSettings | null>(null);
   const [usage, setUsage] = useState<ByokUsagePoint[]>([]);
   const [localKeys, setLocalKeys] = useState<ByokKey[]>([]);
@@ -378,13 +381,7 @@ export const WorkspaceByokSetting = () => {
                 variant="primary"
                 onClick={() => {
                   const normalized = customModelId.trim();
-                  if (normalized) {
-                    globalState.set(AI_CUSTOM_MODEL_ID_KEY, normalized);
-                    globalState.set('AIModelId', normalized);
-                  } else {
-                    globalState.del(AI_CUSTOM_MODEL_ID_KEY);
-                    globalState.set('AIModelId', '');
-                  }
+                  aiModelService.setCustomModel(normalized);
                   notify.success({
                     title: normalized
                       ? 'Custom AI model saved'

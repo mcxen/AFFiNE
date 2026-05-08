@@ -146,7 +146,7 @@ export class AIPanelError extends WithDisposable(LitElement) {
           AIErrorType.Unauthorized,
           () =>
             html` <div class="error-info">
-                You need to login to AFFiNE Cloud to continue using AFFiNE AI.
+                Sign in to the current server to continue using AI.
               </div>
               <div class="action-button-group">
                 <div @click=${this.config.cancel} class="action-button">
@@ -161,19 +161,12 @@ export class AIPanelError extends WithDisposable(LitElement) {
           AIErrorType.PaymentRequired,
           () =>
             html` <div class="error-info">
-                You've reached the current usage cap for AFFiNE AI. You can
-                subscribe to AFFiNE AI(with free 7-day-trial) to continue the AI
-                experience!
+                AI is not available with the current provider settings. Check
+                your self-hosted AI or BYOK configuration and try again.
               </div>
               <div class="action-button-group">
-                <div @click=${this.config.cancel} class="action-button">
+                <div @click=${this.config.cancel} class="action-button primary">
                   <span>Cancel</span>
-                </div>
-                <div
-                  @click=${this.config.upgrade}
-                  class="action-button primary"
-                >
-                  <span>Upgrade</span>
                 </div>
               </div>`,
         ],

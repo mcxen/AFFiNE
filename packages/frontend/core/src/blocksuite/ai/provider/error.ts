@@ -17,7 +17,6 @@ export class UnauthorizedError extends BaseAIError {
   }
 }
 
-// user has used up the quota
 export class PaymentRequiredError extends BaseAIError {
   readonly type = AIErrorType.PaymentRequired;
 

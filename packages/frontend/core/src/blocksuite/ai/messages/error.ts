@@ -147,20 +147,22 @@ export class AIErrorWrapper extends SignalWatcher(WithDisposable(LitElement)) {
             : nothing}
         </div>
       </div>
-      <div class="action">
-        <span
-          class="action-button"
-          @click=${this.onClick}
-          data-testid="ai-error-action-button"
-        >
-          ${this.actionText}
-          ${this.actionTooltip
-            ? html`<affine-tooltip tip-position="top">
-                ${this.actionTooltip}
-              </affine-tooltip>`
-            : nothing}
-        </span>
-      </div>
+      ${this.actionText
+        ? html`<div class="action">
+            <span
+              class="action-button"
+              @click=${this.onClick}
+              data-testid="ai-error-action-button"
+            >
+              ${this.actionText}
+              ${this.actionTooltip
+                ? html`<affine-tooltip tip-position="top">
+                    ${this.actionTooltip}
+                  </affine-tooltip>`
+                : nothing}
+            </span>
+          </div>`
+        : nothing}
     </div>`;
   }
 
@@ -190,15 +192,15 @@ const PaymentRequiredErrorRenderer = (host?: EditorHost | null) => {
   void host;
   return html`
     <ai-error-wrapper
-      .text=${"You've reached the current usage cap for AFFiNE AI."}
-      .actionText=${'Contact us'}
+      .text=${'AI is not available with the current provider settings.'}
+      .actionText=${''}
     ></ai-error-wrapper>
   `;
 };
 
 const LoginRequiredErrorRenderer = (host?: EditorHost | null) => html`
   <ai-error-wrapper
-    .text=${'You need to login to AFFiNE Cloud to continue using AFFiNE AI.'}
+    .text=${'Sign in to the current server to continue using AI.'}
     .actionText=${'Login'}
     .onClick=${() => AIProvider.slots.requestLogin.next({ host })}
   ></ai-error-wrapper>
