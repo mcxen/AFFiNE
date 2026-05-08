@@ -1,0 +1,97 @@
+name: Build and Release macOS
+
+on:
+  push:
+    branches:
+      - canary
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: macos-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-macos:
+    name: Build macOS arm64 installer
+    runs-on: macos-15
+    env:
+      BUILD_TYPE: canary
+      MACOSX_DEPLOYMENT_TARGET: '12.0'
+      NODE_OPTIONS: --max-old-space-size=14384
+      SKIP_OSX_SIGN: '1'
+      SKIP_WEB_BUILD: '1'
+      HOIST_NODE_MODULES: '1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install CMake
+        run: brew install cmake
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build native modules
+        run: yarn affine @affine/native build
+
+      - name: Build Electron layers
+        run: yarn affine @affine/electron build
+
+      - name: Generate desktop web assets
+        run: yarn affine @affine/electron generate-assets
+
+      - name: Make macOS installer
+        run: yarn affine @affine/electron make --platform=darwin --arch=arm64
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p builds
+          tag="macos-canary-${GITHUB_RUN_NUMBER}"
+          version="$(node -p "require('./packages/frontend/apps/electron/package.json').version")"
+          release_date="$(node -e "process.stdout.write(new Date().toISOString())")"
+          base_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}"
+          cp packages/frontend/apps/electron/out/canary/make/AFFiNE.dmg builds/AFFiNE-canary-macos-arm64.dmg
+          cp packages/frontend/apps/electron/out/canary/make/zip/darwin/arm64/*.zip builds/AFFiNE-canary-macos-arm64.zip
+          dmg_sha512="$(openssl dgst -sha512 -binary builds/AFFiNE-canary-macos-arm64.dmg | openssl base64 -A)"
+          zip_sha512="$(openssl dgst -sha512 -binary builds/AFFiNE-canary-macos-arm64.zip | openssl base64 -A)"
+          dmg_size="$(stat -f%z builds/AFFiNE-canary-macos-arm64.dmg)"
+          zip_size="$(stat -f%z builds/AFFiNE-canary-macos-arm64.zip)"
+          cat > builds/latest.yml <<EOF
+          version: ${version}
+          files:
+            - url: ${base_url}/AFFiNE-canary-macos-arm64.zip
+              sha512: ${zip_sha512}
+              size: ${zip_size}
+            - url: ${base_url}/AFFiNE-canary-macos-arm64.dmg
+              sha512: ${dmg_sha512}
+              size: ${dmg_size}
+          path: ${base_url}/AFFiNE-canary-macos-arm64.zip
+          sha512: ${zip_sha512}
+          releaseDate: ${release_date}
+          EOF
+          shasum -a 256 builds/* > builds/SHA256SUMS.txt
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: affine-canary-macos-arm64
+          path: builds/*
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: macos-canary-${{ github.run_number }}
+          name: macOS Canary ${{ github.run_number }}
+          prerelease: true
+          files: builds/*
