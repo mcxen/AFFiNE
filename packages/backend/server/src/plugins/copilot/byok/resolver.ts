@@ -277,7 +277,6 @@ export class WorkspaceByokResolver {
       .workspace(workspace.id)
       .allowLocal()
       .assert('Workspace.Settings.Read');
-    await this.entitlement.assertManagementAccess(workspace.id, user.id);
     return await this.byok.getSettings(workspace.id, user.id);
   }
 
@@ -306,15 +305,20 @@ export class WorkspaceByokResolver {
     @CurrentUser() user: CurrentUser,
     @Args('input') input: TestWorkspaceByokConfigInput
   ) {
-    await this.ac
-      .user(user.id)
-      .workspace(input.workspaceId)
-      .allowLocal()
-      .assert('Workspace.Settings.Update');
-    await this.entitlement.assertManagementAccess(input.workspaceId, user.id);
     if (input.storage === ByokKeyStorage.server) {
+      await this.ac
+        .user(user.id)
+        .workspace(input.workspaceId)
+        .allowLocal()
+        .assert('Workspace.Settings.Update');
+      await this.entitlement.assertManagementAccess(input.workspaceId, user.id);
       await this.entitlement.assertServerEntitled(input.workspaceId);
     } else {
+      await this.ac
+        .user(user.id)
+        .workspace(input.workspaceId)
+        .allowLocal()
+        .assert('Workspace.Copilot');
       await this.entitlement.assertLocalEntitled(input.workspaceId, user.id);
     }
     return await this.byok.testConfig({ ...input, userId: user.id });

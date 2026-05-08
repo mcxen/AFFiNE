@@ -1,6 +1,6 @@
 import { Avatar, Loading, Scrollable } from '@affine/component';
 import { EditorLoading } from '@affine/component/page-detail-skeleton';
-import { Button, IconButton } from '@affine/component/ui/button';
+import { Button } from '@affine/component/ui/button';
 import { Modal, useConfirmModal } from '@affine/component/ui/modal';
 import { DocDisplayMetaService } from '@affine/core/modules/doc-display-meta';
 import { EditorService } from '@affine/core/modules/editor';
@@ -19,7 +19,6 @@ import {
   Fragment,
   Suspense,
   useCallback,
-  useEffect,
   useLayoutEffect,
   useMemo,
   useState,

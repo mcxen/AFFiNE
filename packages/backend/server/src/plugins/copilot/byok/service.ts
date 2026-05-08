@@ -118,24 +118,14 @@ export class ByokService {
     workspaceId: string,
     userId?: string
   ): Promise<ByokSettings> {
-    if (!(await this.entitlement.hasManagementAccess(workspaceId, userId))) {
-      return {
-        workspaceId,
-        entitled: false,
-        serverEntitled: false,
-        localEntitled: false,
-        entitlementRequired: ['Workspace owner or admin'],
-        keys: [],
-        allowedProviders: [...BYOK_ALLOWED_PROVIDERS],
-        localStorageSupported: false,
-        customEndpointSupported: this.customEndpointSupported,
-        hasAiPlan: await this.entitlement.hasAiPlan(userId),
-        warnings: [],
-      };
-    }
+    const canManageWorkspace = await this.entitlement.hasManagementAccess(
+      workspaceId,
+      userId
+    );
 
-    const [serverEntitled, localEntitled] =
+    const [rawServerEntitled, localEntitled] =
       await this.entitlement.hasEntitlement(workspaceId, userId);
+    const serverEntitled = canManageWorkspace && rawServerEntitled;
     const entitled = serverEntitled || localEntitled;
     if (!entitled) {
       return {
@@ -285,11 +275,11 @@ export class ByokService {
     configId?: string | null;
     userId?: string;
   }) {
-    await this.entitlement.assertManagementAccess(
-      input.workspaceId,
-      input.userId
-    );
     if (input.storage === ByokKeyStorage.server) {
+      await this.entitlement.assertManagementAccess(
+        input.workspaceId,
+        input.userId
+      );
       await this.entitlement.assertServerEntitled(input.workspaceId);
     } else {
       await this.entitlement.assertLocalEntitled(
