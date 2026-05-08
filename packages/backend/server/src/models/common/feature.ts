@@ -1,6 +1,14 @@
 import { z } from 'zod';
 
-import { OneDay, OneGB, OneMB } from '../../base';
+import { OneDay, OneGB } from '../../base';
+
+const UnlimitedQuota = {
+  blobLimit: 1024 * OneGB,
+  businessBlobLimit: 1024 * OneGB,
+  storageQuota: 1024 * 1024 * OneGB,
+  historyPeriod: 3650 * OneDay,
+  memberLimit: 100000,
+} as const;
 
 const UserPlanQuotaConfig = z.object({
   // quota name
@@ -97,12 +105,7 @@ const FreeFeature = {
   configs: {
     // quota name
     name: 'Free',
-    blobLimit: 10 * OneMB,
-    businessBlobLimit: 100 * OneMB,
-    storageQuota: 10 * OneGB,
-    historyPeriod: 7 * OneDay,
-    memberLimit: 3,
-    copilotActionLimit: 10,
+    ...UnlimitedQuota,
   },
 } as const;
 
@@ -110,11 +113,7 @@ const ProFeature = {
   type: FeatureType.Quota,
   configs: {
     name: 'Pro',
-    blobLimit: 100 * OneMB,
-    storageQuota: 100 * OneGB,
-    historyPeriod: 30 * OneDay,
-    memberLimit: 10,
-    copilotActionLimit: 10,
+    ...UnlimitedQuota,
   },
 } as const;
 
@@ -122,11 +121,7 @@ const LifetimeProFeature = {
   type: FeatureType.Quota,
   configs: {
     name: 'Lifetime Pro',
-    blobLimit: 100 * OneMB,
-    storageQuota: 1024 * OneGB,
-    historyPeriod: 30 * OneDay,
-    memberLimit: 10,
-    copilotActionLimit: 10,
+    ...UnlimitedQuota,
   },
 } as const;
 
@@ -134,11 +129,8 @@ const TeamFeature = {
   type: FeatureType.Quota,
   configs: {
     name: 'Team Workspace',
-    blobLimit: 500 * OneMB,
-    storageQuota: 100 * OneGB,
-    seatQuota: 20 * OneGB,
-    historyPeriod: 30 * OneDay,
-    memberLimit: 1,
+    ...UnlimitedQuota,
+    seatQuota: 1024 * OneGB,
   },
 } as const;
 

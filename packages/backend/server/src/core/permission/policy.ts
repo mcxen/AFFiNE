@@ -8,7 +8,6 @@ import {
   SpaceAccessDenied,
 } from '../../base';
 import { Models, WorkspaceRole } from '../../models';
-import { QuotaService } from '../quota/service';
 import { getAccessController } from './controller';
 import type { Resource } from './resource';
 import {
@@ -20,11 +19,6 @@ import {
 } from './types';
 
 export type WorkspaceReadonlyReason = 'member_overflow' | 'storage_overflow';
-type WorkspaceQuotaSnapshot = Awaited<
-  ReturnType<QuotaService['getWorkspaceQuotaWithUsage']>
-> & {
-  ownerQuota?: string;
-};
 
 export type WorkspaceState = {
   isTeamWorkspace: boolean;
@@ -74,33 +68,13 @@ declare global {
 
 @Injectable()
 export class WorkspacePolicyService {
-  constructor(
-    private readonly models: Models,
-    private readonly quota: QuotaService
-  ) {}
+  constructor(private readonly models: Models) {}
 
   async getWorkspaceState(workspaceId: string): Promise<WorkspaceState> {
-    const [isTeamWorkspace, isUnlimitedWorkspace, quota] = await Promise.all([
-      this.models.workspace.isTeamWorkspace(workspaceId),
-      this.models.workspaceFeature.has(workspaceId, 'unlimited_workspace'),
-      this.quota.getWorkspaceQuotaWithUsage(workspaceId),
-    ]);
-    const quotaSnapshot = quota as WorkspaceQuotaSnapshot;
-
+    const isTeamWorkspace =
+      await this.models.workspace.isTeamWorkspace(workspaceId);
     const readonlyReasons: WorkspaceReadonlyReason[] = [];
-    const usesFallbackOwnerQuota =
-      !!quotaSnapshot.ownerQuota && !isUnlimitedWorkspace;
-
-    if (usesFallbackOwnerQuota && quotaSnapshot.overcapacityMemberCount > 0) {
-      readonlyReasons.push('member_overflow');
-    }
-
-    if (
-      usesFallbackOwnerQuota &&
-      quotaSnapshot.usedStorageQuota > quotaSnapshot.storageQuota
-    ) {
-      readonlyReasons.push('storage_overflow');
-    }
+    const usesFallbackOwnerQuota = false;
 
     return {
       isTeamWorkspace,
