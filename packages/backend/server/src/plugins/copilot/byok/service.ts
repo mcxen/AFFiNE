@@ -361,10 +361,6 @@ export class ByokService {
     providers: ByokLocalLeaseProvider[];
     userId: string;
   }) {
-    await this.entitlement.assertManagementAccess(
-      input.workspaceId,
-      input.userId
-    );
     await this.entitlement.assertLocalEntitled(input.workspaceId, input.userId);
     const providers = input.providers.map(provider => {
       this.assertProvider(provider.provider);
@@ -544,14 +540,6 @@ export class ByokService {
 
   private async getLocalProfiles(context: ByokProviderRequestContext) {
     if (!context.byokLeaseId || !context.workspaceId || !context.userId) {
-      return [];
-    }
-    if (
-      !(await this.entitlement.hasManagementAccess(
-        context.workspaceId,
-        context.userId
-      ))
-    ) {
       return [];
     }
     const lease = await this.cache.get<LocalLeasePayload>(

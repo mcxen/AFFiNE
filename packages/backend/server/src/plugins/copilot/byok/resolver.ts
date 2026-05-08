@@ -398,7 +398,6 @@ export class WorkspaceByokResolver {
       .workspace(input.workspaceId)
       .allowLocal()
       .assert('Workspace.Copilot');
-    await this.entitlement.assertManagementAccess(input.workspaceId, user.id);
     await this.entitlement.assertLocalEntitled(input.workspaceId, user.id);
     return await this.byok.createLocalLease({ ...input, userId: user.id });
   }
