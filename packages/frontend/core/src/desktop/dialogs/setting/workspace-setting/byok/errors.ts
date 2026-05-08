@@ -11,9 +11,11 @@ function errorMetadata(error: unknown) {
         ? record.status
         : undefined,
     type: typeof record.type === 'string' ? record.type : undefined,
+    message:
+      typeof record.message === 'string' ? record.message : undefined,
   };
 }
 
 export function logByokError(context: string, error: unknown) {
-  console.warn(context, errorMetadata(error));
+  console.warn(context, errorMetadata(error), error);
 }

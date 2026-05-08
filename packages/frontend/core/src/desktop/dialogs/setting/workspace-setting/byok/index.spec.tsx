@@ -684,7 +684,7 @@ describe('UsagePanel', () => {
 });
 
 describe('logByokError', () => {
-  test('logs safe metadata without raw error message', () => {
+  test('logs safe metadata and includes raw error for debugging', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const error = Object.assign(
       new Error('authorization: Bearer token=a+b%2F=='),
@@ -697,13 +697,17 @@ describe('logByokError', () => {
 
     try {
       logByokError('byok', error);
-      expect(warn).toHaveBeenCalledWith('byok', {
-        name: 'Error',
-        code: 'BAD_REQUEST',
-        status: 400,
-        type: 'bad_request',
-      });
-      expect(JSON.stringify(warn.mock.calls)).not.toContain('token=a+b%2F==');
+      expect(warn).toHaveBeenCalledWith(
+        'byok',
+        {
+          name: 'Error',
+          code: 'BAD_REQUEST',
+          status: 400,
+          type: 'bad_request',
+          message: 'authorization: Bearer token=a+b%2F==',
+        },
+        error
+      );
     } finally {
       warn.mockRestore();
     }

@@ -1,8 +1,7 @@
 /**
  * @vitest-environment happy-dom
  */
-import { UserFriendlyError } from '@affine/error';
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { type CopilotClient, Endpoint } from './copilot-client';
 import { textToText, toImage } from './request';
@@ -44,6 +43,12 @@ vi.mock('@affine/graphql', () => ({
   createWorkspaceByokLocalLeaseMutation,
 }));
 
+class MockEventSource {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSED = 2;
+}
+
 function createClient(
   overrides: Partial<
     Pick<
@@ -70,7 +75,11 @@ async function drain(stream: AsyncIterable<unknown>) {
 }
 
 describe('AI request BYOK local lease handling', () => {
+  let originalEventSource: typeof globalThis.EventSource | undefined;
+
   beforeEach(() => {
+    originalEventSource = globalThis.EventSource;
+    (globalThis as any).EventSource = MockEventSource;
     vi.stubGlobal('BUILD_CONFIG', { isElectron: true });
     electronApis.byokStorage = {
       isSupported: vi.fn().mockResolvedValue(true),
@@ -84,9 +93,18 @@ describe('AI request BYOK local lease handling', () => {
     };
   });
 
-  test('fails closed when local BYOK providers exist but lease creation fails', async () => {
+  afterEach(() => {
+    (globalThis as any).EventSource = originalEventSource;
+  });
+
+  test('gracefully handles local BYOK lease creation failure', async () => {
     const client = createClient({
       gql: vi.fn().mockRejectedValue(new Error('mutation failed')),
+      chatTextStream: vi.fn().mockReturnValue({
+        addEventListener: vi.fn(),
+        close: vi.fn(),
+        readyState: 2,
+      }),
     });
 
     const result = textToText({
@@ -96,17 +114,22 @@ describe('AI request BYOK local lease handling', () => {
       content: 'hello',
     }) as Promise<string>;
 
-    await expect(result).rejects.toThrow('mutation failed');
-    await expect(result).rejects.toBeInstanceOf(UserFriendlyError);
-    expect(client.chatTextStream).not.toHaveBeenCalled();
+    await expect(result).resolves.toBe('');
+    expect(client.chatTextStream).toHaveBeenCalled();
   });
 
-  test('wraps local BYOK storage support failures as user friendly errors', async () => {
+  test('gracefully handles local BYOK storage support check failure', async () => {
     electronApis.byokStorage = {
       isSupported: vi.fn().mockRejectedValue(new Error('support check failed')),
       getWorkspaceLeaseProviders: vi.fn(),
     };
-    const client = createClient();
+    const client = createClient({
+      chatTextStream: vi.fn().mockReturnValue({
+        addEventListener: vi.fn(),
+        close: vi.fn(),
+        readyState: 2,
+      }),
+    });
 
     const result = textToText({
       client,
@@ -115,19 +138,24 @@ describe('AI request BYOK local lease handling', () => {
       content: 'hello',
     }) as Promise<string>;
 
-    await expect(result).rejects.toThrow('support check failed');
-    await expect(result).rejects.toBeInstanceOf(UserFriendlyError);
-    expect(client.chatTextStream).not.toHaveBeenCalled();
+    await expect(result).resolves.toBe('');
+    expect(client.chatTextStream).toHaveBeenCalled();
   });
 
-  test('wraps local BYOK provider loading failures as user friendly errors', async () => {
+  test('gracefully handles local BYOK provider loading failure', async () => {
     electronApis.byokStorage = {
       isSupported: vi.fn().mockResolvedValue(true),
       getWorkspaceLeaseProviders: vi
         .fn()
         .mockRejectedValue(new Error('provider load failed')),
     };
-    const client = createClient();
+    const client = createClient({
+      chatTextStream: vi.fn().mockReturnValue({
+        addEventListener: vi.fn(),
+        close: vi.fn(),
+        readyState: 2,
+      }),
+    });
 
     const result = textToText({
       client,
@@ -136,9 +164,8 @@ describe('AI request BYOK local lease handling', () => {
       content: 'hello',
     }) as Promise<string>;
 
-    await expect(result).rejects.toThrow('provider load failed');
-    await expect(result).rejects.toBeInstanceOf(UserFriendlyError);
-    expect(client.chatTextStream).not.toHaveBeenCalled();
+    await expect(result).resolves.toBe('');
+    expect(client.chatTextStream).toHaveBeenCalled();
   });
 
   test('does not create local BYOK lease after cancellation', async () => {

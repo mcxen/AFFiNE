@@ -149,3 +149,61 @@ describe('byok storage handlers', () => {
     });
   });
 });
+
+describe('byok storage with unencrypted fallback', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  test('works without safeStorage encryption using base64 fallback', async () => {
+    vi.doMock('electron', () => ({
+      app: {
+        getPath: () => tmpDir,
+        on: vi.fn(),
+      },
+      safeStorage: {
+        isEncryptionAvailable: () => false,
+        encryptString: () => {
+          throw new Error('not available');
+        },
+        decryptString: () => {
+          throw new Error('not available');
+        },
+      },
+    }));
+
+    const { byokStorageHandlers, disposeWorkspaceByokStorage: dispose } =
+      await import('@affine/electron/main/byok-storage/handlers');
+    disposeWorkspaceByokStorage = dispose;
+    const ipcEvent = undefined;
+
+    const isSupported = await byokStorageHandlers.isSupported(ipcEvent);
+    expect(isSupported).toBe(true);
+
+    await byokStorageHandlers.upsertWorkspaceKey(ipcEvent, 'workspace-1', {
+      id: 'local-openai',
+      provider: 'openai',
+      name: 'OpenAI',
+      apiKey: 'sk-openai',
+      sortOrder: 0,
+    });
+
+    const list = await byokStorageHandlers.listWorkspaceKeys(
+      ipcEvent,
+      'workspace-1'
+    );
+    expect(list).toHaveLength(1);
+    expect(list[0].id).toBe('local-openai');
+    expect(list[0].endpointEditable).toBe(true);
+
+    const leaseProviders =
+      await byokStorageHandlers.getWorkspaceLeaseProviders(
+        ipcEvent,
+        'workspace-1'
+      );
+    expect(leaseProviders).toHaveLength(1);
+    expect(leaseProviders[0].apiKey).toBe('sk-openai');
+
+    vi.doUnmock('electron');
+  });
+});

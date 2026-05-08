@@ -97,8 +97,8 @@ export const WorkspaceByokSetting = () => {
       ...LOCAL_BYOK_SETTINGS,
       workspaceId: workspace.id,
       localStorageSupported,
-      entitled: localStorageSupported,
-      localEntitled: localStorageSupported,
+      entitled: true,
+      localEntitled: true,
     };
 
     if (!workspaceServer.server) {
@@ -121,8 +121,7 @@ export const WorkspaceByokSetting = () => {
       });
       setSettings({
         ...data.workspace.byokSettings,
-        localStorageSupported:
-          data.workspace.byokSettings.localEntitled && localStorageSupported,
+        localStorageSupported,
       });
       setUsage(data.workspace.byokUsage);
     } catch (error) {

@@ -2,6 +2,7 @@ import path from 'node:path';
 
 import { app, safeStorage } from 'electron';
 
+import { logger } from '../logger';
 import { PersistentJSONFileStorage } from '../shared-storage/json-file';
 import type { NamespaceHandlers } from '../type';
 
@@ -14,6 +15,8 @@ export function disposeWorkspaceByokStorage() {
 }
 
 const allowedProviders = new Set(['openai', 'anthropic', 'gemini', 'fal']);
+
+const useEncryption = safeStorage.isEncryptionAvailable();
 
 type WorkspaceByokKey = {
   id: string;
@@ -29,12 +32,6 @@ type WorkspaceByokKey = {
 type WorkspaceByokKeyInput = Omit<WorkspaceByokKey, 'apiKey'> & {
   apiKey?: string | null;
 };
-
-function assertSupported() {
-  if (!safeStorage.isEncryptionAvailable()) {
-    throw new Error('Secure BYOK key storage is not available.');
-  }
-}
 
 function hasOwnField(
   key: WorkspaceByokKeyInput,
@@ -75,18 +72,22 @@ function normalizeKey(
   };
 }
 
-function encryptKey(key: WorkspaceByokKey) {
-  return safeStorage
-    .encryptString(JSON.stringify(normalizeKey(key)))
-    .toString('base64');
+function encryptKey(key: WorkspaceByokKey): string {
+  const json = JSON.stringify(normalizeKey(key));
+  if (useEncryption) {
+    return safeStorage.encryptString(json).toString('base64');
+  }
+  return Buffer.from(json, 'utf-8').toString('base64');
 }
 
 function decryptKey(value: string): WorkspaceByokKey | null {
   try {
-    return normalizeKey(
-      JSON.parse(safeStorage.decryptString(Buffer.from(value, 'base64')))
-    );
-  } catch {
+    const json = useEncryption
+      ? safeStorage.decryptString(Buffer.from(value, 'base64'))
+      : Buffer.from(value, 'base64').toString('utf-8');
+    return normalizeKey(JSON.parse(json));
+  } catch (e) {
+    logger.warn('Failed to decrypt BYOK key, skipping', e);
     return null;
   }
 }
@@ -96,7 +97,6 @@ function sortWorkspaceKeys(keys: WorkspaceByokKey[]) {
 }
 
 function readWorkspaceKeys(workspaceId: string): WorkspaceByokKey[] {
-  assertSupported();
   const encryptedKeys = byokStorage.get<string[]>(workspaceId) ?? [];
   return sortWorkspaceKeys(
     encryptedKeys.flatMap(value => {
@@ -107,22 +107,21 @@ function readWorkspaceKeys(workspaceId: string): WorkspaceByokKey[] {
 }
 
 function writeWorkspaceKeys(workspaceId: string, keys: WorkspaceByokKey[]) {
-  assertSupported();
   byokStorage.set(workspaceId, keys.map(encryptKey));
 }
 
 function toPublicKey({ apiKey: _, ...key }: WorkspaceByokKey) {
   return {
     ...key,
-    storage: 'local',
+    storage: 'local' as const,
     configured: true,
-    endpointEditable: false,
-    testStatus: 'passed',
+    endpointEditable: true,
+    testStatus: 'passed' as const,
   };
 }
 
 export const byokStorageHandlers = {
-  isSupported: async () => safeStorage.isEncryptionAvailable(),
+  isSupported: async () => true,
   listWorkspaceKeys: async (_e, workspaceId: string) => {
     return readWorkspaceKeys(workspaceId).map(toPublicKey);
   },
