@@ -22,7 +22,6 @@ jobs:
       MACOSX_DEPLOYMENT_TARGET: '12.0'
       NODE_OPTIONS: --max-old-space-size=14384
       SKIP_OSX_SIGN: '1'
-      SKIP_WEB_BUILD: '1'
       HOIST_NODE_MODULES: '1'
     steps:
       - name: Checkout
@@ -51,8 +50,14 @@ jobs:
       - name: Generate desktop web assets
         run: yarn affine @affine/electron generate-assets
 
+      - name: Verify desktop web assets
+        run: test -f packages/frontend/apps/electron/resources/web-static/index.html
+
       - name: Make macOS installer
         run: yarn affine @affine/electron make --platform=darwin --arch=arm64
+        env:
+          SKIP_GENERATE_ASSETS: '1'
+          SKIP_WEB_BUILD: '1'
 
       - name: Collect artifacts
         run: |
