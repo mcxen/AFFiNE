@@ -1,14 +1,7 @@
 import type { AIToolsConfigService } from '@affine/core/modules/ai-button';
 import type { AIModelService } from '@affine/core/modules/ai-button/services/models';
-import type {
-  ServerService,
-  SubscriptionService,
-} from '@affine/core/modules/cloud';
-import {
-  type CopilotChatHistoryFragment,
-  ServerDeploymentType,
-  SubscriptionStatus,
-} from '@affine/graphql';
+import type { ServerService } from '@affine/core/modules/cloud';
+import { type CopilotChatHistoryFragment } from '@affine/graphql';
 import {
   menu,
   popMenu,
@@ -22,7 +15,6 @@ import {
   ArrowDownSmallIcon,
   CloudWorkspaceIcon,
   DoneIcon,
-  LockIcon,
   ThinkingIcon,
 } from '@blocksuite/icons/lit';
 import { ShadowlessElement } from '@blocksuite/std';
@@ -117,13 +109,7 @@ export class ChatInputPreference extends SignalWatcher(
   accessor notificationService!: NotificationService;
 
   @property({ attribute: false })
-  accessor subscriptionService!: SubscriptionService;
-
-  @property({ attribute: false })
   accessor aiModelService!: AIModelService;
-
-  @property({ attribute: false })
-  accessor onAISubscribe!: () => Promise<void>;
 
   model = computed(() => {
     const modelId = this.aiModelService.modelId.value;
@@ -154,12 +140,6 @@ export class ChatInputPreference extends SignalWatcher(
         options: {
           items: this.aiModelService.models.value.map(model => {
             const isSelected = model.id === this.model.value?.id;
-            const isSelfHosted =
-              this.serverService.server.config$.value?.type ===
-              ServerDeploymentType.Selfhosted;
-            const status =
-              this.subscriptionService.subscription.ai$.value?.status;
-            const isSubscribed = status === SubscriptionStatus.Active;
             return menu.action({
               name: model.category,
               info: html`
@@ -170,18 +150,8 @@ export class ChatInputPreference extends SignalWatcher(
                   ${isSelected ? DoneIcon() : undefined}
                 </div>
               `,
-              postfix: html`
-                <div class="ai-model-postfix" @click=${this.onAISubscribe}>
-                  ${model.isPro && !isSubscribed ? LockIcon() : undefined}
-                </div>
-              `,
+              postfix: html` <div class="ai-model-postfix"></div> `,
               select: () => {
-                if (model.isPro && !isSelfHosted && !isSubscribed) {
-                  this.notificationService.toast(
-                    `Pro models require an AFFiNE AI subscription.`
-                  );
-                  return;
-                }
                 this.aiModelService.setModel(model.id);
               },
             });

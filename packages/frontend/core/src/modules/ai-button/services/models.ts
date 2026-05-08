@@ -1,4 +1,4 @@
-import { getPromptModelsQuery, SubscriptionStatus } from '@affine/graphql';
+import { getPromptModelsQuery } from '@affine/graphql';
 import {
   createSignalFromObservable,
   type Signal,
@@ -6,7 +6,7 @@ import {
 import { signal } from '@preact/signals-core';
 import { LiveData, Service } from '@toeverything/infra';
 
-import type { GraphQLService, SubscriptionService } from '../../cloud';
+import type { GraphQLService } from '../../cloud';
 import type { GlobalStateService } from '../../storage';
 
 const AI_MODEL_ID_KEY = 'AIModelId';
@@ -38,8 +38,7 @@ export class AIModelService extends Service {
 
   constructor(
     private readonly globalStateService: GlobalStateService,
-    private readonly gqlService: GraphQLService,
-    private readonly subscriptionService: SubscriptionService
+    private readonly gqlService: GraphQLService
   ) {
     super();
 
@@ -64,15 +63,9 @@ export class AIModelService extends Service {
   };
 
   setModel = (modelId: string) => {
-    const isSubscribed =
-      this.subscriptionService.subscription.ai$.value?.status ===
-      SubscriptionStatus.Active;
     const model = this.models.value.find(model => model.id === modelId);
     if (!model && modelId === this.getCustomModelId()) {
       this.globalStateService.globalState.set(AI_MODEL_ID_KEY, modelId);
-      return;
-    }
-    if (!isSubscribed && model?.isPro) {
       return;
     }
     this.globalStateService.globalState.set(AI_MODEL_ID_KEY, modelId);
@@ -130,20 +123,6 @@ export class AIModelService extends Service {
 
   private readonly init = async () => {
     await this.initModels();
-
-    // subscribe to ai purchase status
-    const sub = this.subscriptionService.subscription.ai$.subscribe(
-      subscription => {
-        const isSubscribed = subscription?.status === SubscriptionStatus.Active;
-        const model = this.models.value.find(
-          model => model.id === this.modelId.value
-        );
-        if (!isSubscribed && model?.isPro) {
-          this.resetModel();
-        }
-      }
-    );
-    this.disposables.push(() => sub.unsubscribe());
   };
 
   private readonly initModels = async (prompt?: string) => {

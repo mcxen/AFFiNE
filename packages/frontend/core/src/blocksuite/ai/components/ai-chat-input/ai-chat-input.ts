@@ -3,10 +3,7 @@ import type {
   AIToolsConfigService,
 } from '@affine/core/modules/ai-button';
 import type { AIModelService } from '@affine/core/modules/ai-button/services/models';
-import type {
-  ServerService,
-  SubscriptionService,
-} from '@affine/core/modules/cloud';
+import type { ServerService } from '@affine/core/modules/cloud';
 import type { FeatureFlagService } from '@affine/core/modules/feature-flag';
 import type { CopilotChatHistoryFragment } from '@affine/graphql';
 import track, { type EventArgs } from '@affine/track';
@@ -410,13 +407,7 @@ export class AIChatInput extends SignalWatcher(
   accessor notificationService!: NotificationService;
 
   @property({ attribute: false })
-  accessor subscriptionService!: SubscriptionService;
-
-  @property({ attribute: false })
   accessor aiModelService!: AIModelService;
-
-  @property({ attribute: false })
-  accessor onAISubscribe!: () => Promise<void>;
 
   @property({ attribute: false })
   accessor isRootSession: boolean = true;
@@ -635,9 +626,7 @@ export class AIChatInput extends SignalWatcher(
           .serverService=${this.serverService}
           .toolsConfigService=${this.aiToolsConfigService}
           .notificationService=${this.notificationService}
-          .subscriptionService=${this.subscriptionService}
           .aiModelService=${this.aiModelService}
-          .onAISubscribe=${this.onAISubscribe}
         ></chat-input-preference>
         ${status === 'transmitting' || status === 'loading'
           ? html`<button

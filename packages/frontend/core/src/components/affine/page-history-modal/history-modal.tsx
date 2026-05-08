@@ -196,7 +196,7 @@ const PlanPrompt = () => {
 
   const onClickUpgrade = useCallback(() => {
     workspaceDialogService.open('setting', {
-      activeTab: 'plans',
+      activeTab: 'appearance',
       scrollAnchor: 'cloudPricingPlan',
     });
     track.$.docHistory.$.viewPlans();

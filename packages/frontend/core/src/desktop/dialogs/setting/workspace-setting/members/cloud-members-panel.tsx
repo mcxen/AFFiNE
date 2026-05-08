@@ -1,17 +1,11 @@
-import { Button, Loading, notify, useConfirmModal } from '@affine/component';
+import { Button, Loading, notify } from '@affine/component';
 import {
   InviteTeamMemberModal,
   type InviteTeamMemberModalProps,
-  MemberLimitModal,
 } from '@affine/component/member-components';
 import { SettingRow } from '@affine/component/setting-components';
 import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
 import { Upload } from '@affine/core/components/pure/file-upload';
-import {
-  ServerService,
-  SubscriptionService,
-  WorkspaceSubscriptionService,
-} from '@affine/core/modules/cloud';
 import {
   WorkspaceMembersService,
   WorkspacePermissionService,
@@ -22,14 +16,11 @@ import { copyTextToClipboard } from '@affine/core/utils/clipboard';
 import { emailRegex } from '@affine/core/utils/email-regex';
 import { UserFriendlyError } from '@affine/error';
 import type { WorkspaceInviteLinkExpireTime } from '@affine/graphql';
-import { ServerDeploymentType, SubscriptionPlan } from '@affine/graphql';
 import { useI18n } from '@affine/i18n';
 import { ExportIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
-import { nanoid } from 'nanoid';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import type { SettingState } from '../../types';
 import { MemberList } from './member-list';
 import * as styles from './styles.css';
 
@@ -49,26 +40,13 @@ const parseCSV = async (blob: Blob): Promise<string[]> => {
 };
 
 export const CloudWorkspaceMembersPanel = ({
-  onChangeSettingState,
   isTeam,
 }: {
-  onChangeSettingState: (settingState: SettingState) => void;
   isTeam?: boolean;
 }) => {
   const workspaceShareSettingService = useService(WorkspaceShareSettingService);
-  const subscription = useService(WorkspaceSubscriptionService).subscription;
-  const workspaceSubscription = useLiveData(subscription.subscription$);
   const inviteLink = useLiveData(
     workspaceShareSettingService.sharePreview.inviteLink$
-  );
-  const serverService = useService(ServerService);
-  const hasPaymentFeature = useLiveData(
-    serverService.server.features$.map(f => f?.payment)
-  );
-  const isSelfhosted = useLiveData(
-    serverService.server.config$.selector(
-      c => c.type === ServerDeploymentType.Selfhosted
-    )
   );
   const membersService = useService(WorkspaceMembersService);
   const permissionService = useService(WorkspacePermissionService);
@@ -91,88 +69,15 @@ export const CloudWorkspaceMembersPanel = ({
   const isLoading = useLiveData(workspaceQuotaService.quota.isRevalidating$);
   const error = useLiveData(workspaceQuotaService.quota.error$);
   const workspaceQuota = useLiveData(workspaceQuotaService.quota.quota$);
-  const subscriptionService = useService(SubscriptionService);
-  const plan = useLiveData(
-    subscriptionService.subscription.pro$.map(s => s?.plan)
-  );
 
   const t = useI18n();
 
   const [openInvite, setOpenInvite] = useState(false);
-  const [openMemberLimit, setOpenMemberLimit] = useState(false);
   const [isMutating, setIsMutating] = useState(false);
 
-  const { openConfirmModal, closeConfirmModal } = useConfirmModal();
-  const goToTeamBilling = useCallback(() => {
-    onChangeSettingState({
-      activeTab: isSelfhosted ? 'workspace:preference' : 'workspace:billing',
-    });
-  }, [isSelfhosted, onChangeSettingState]);
-  const [idempotencyKey, setIdempotencyKey] = useState(nanoid());
-  const resume = useAsyncCallback(async () => {
-    try {
-      setIsMutating(true);
-      await subscription.resumeSubscription(
-        idempotencyKey,
-        SubscriptionPlan.Team
-      );
-      await subscription.waitForRevalidation();
-      // refresh idempotency key
-      setIdempotencyKey(nanoid());
-      closeConfirmModal();
-      notify.success({
-        title: t['com.affine.payment.resume.success.title'](),
-        message: t['com.affine.payment.resume.success.team.message'](),
-      });
-    } catch (err) {
-      const error = UserFriendlyError.fromAny(err);
-      notify.error({
-        title: error.name,
-        message: error.message,
-      });
-    } finally {
-      setIsMutating(false);
-    }
-  }, [subscription, idempotencyKey, closeConfirmModal, t]);
   const openInviteModal = useCallback(() => {
-    if (isTeam && workspaceSubscription?.canceledAt) {
-      openConfirmModal({
-        title: t['com.affine.payment.member.team.retry-payment.title'](),
-        description:
-          t[
-            `com.affine.payment.member.team.disabled-subscription.${isOwner ? 'owner' : 'admin'}.description`
-          ](),
-        confirmText:
-          t[
-            isOwner
-              ? 'com.affine.payment.member.team.disabled-subscription.resume-subscription'
-              : 'Got it'
-          ](),
-        cancelText: t['Cancel'](),
-        cancelButtonOptions: {
-          style: {
-            visibility: isOwner ? 'visible' : 'hidden',
-          },
-        },
-        onConfirm: isOwner ? resume : undefined,
-        confirmButtonOptions: {
-          variant: 'primary',
-          loading: isMutating,
-        },
-      });
-
-      return;
-    }
     setOpenInvite(true);
-  }, [
-    isMutating,
-    isOwner,
-    isTeam,
-    openConfirmModal,
-    resume,
-    t,
-    workspaceSubscription?.canceledAt,
-  ]);
+  }, []);
 
   const onGenerateInviteLink = useCallback(
     async (expireTime: WorkspaceInviteLinkExpireTime) => {
@@ -195,16 +100,6 @@ export const CloudWorkspaceMembersPanel = ({
     }: Parameters<InviteTeamMemberModalProps['onConfirm']>[0]) => {
       setIsMutating(true);
       const uniqueEmails = deduplicateEmails(emails);
-      if (
-        !isTeam &&
-        workspaceQuota &&
-        uniqueEmails.length >
-          workspaceQuota.memberLimit - workspaceQuota.memberCount
-      ) {
-        setOpenMemberLimit(true);
-        setIsMutating(false);
-        return;
-      }
       const results = await membersService.inviteMembers(uniqueEmails);
       const unSuccessInvites = results.reduce<string[]>((acc, result) => {
         if (!result.sentSuccess) {
@@ -228,7 +123,7 @@ export const CloudWorkspaceMembersPanel = ({
       }
       setIsMutating(false);
     },
-    [isTeam, membersService, t, workspaceQuota, workspaceQuotaService.quota]
+    [membersService, t, workspaceQuotaService.quota]
   );
 
   const onImportCSV = useAsyncCallback(
@@ -241,46 +136,21 @@ export const CloudWorkspaceMembersPanel = ({
     [onInviteBatchConfirm]
   );
 
-  const handleUpgradeConfirm = useCallback(() => {
-    setOpenMemberLimit(false);
-  }, []);
-
   const desc = useMemo(() => {
     if (!workspaceQuota) return null;
 
     if (isTeam) {
       return <span>{t['com.affine.payment.member.team.description']()}</span>;
     }
-    return (
-      <span>
-        {t['com.affine.payment.member.description2']()}
-        {hasPaymentFeature && isOwner ? (
-          <div
-            className={styles.goUpgradeWrapper}
-            onClick={handleUpgradeConfirm}
-          >
-            <span className={styles.goUpgrade}>
-              {t['com.affine.payment.member.description.choose-plan']()}
-            </span>
-          </div>
-        ) : null}
-      </span>
-    );
-  }, [
-    handleUpgradeConfirm,
-    hasPaymentFeature,
-    isOwner,
-    isTeam,
-    t,
-    workspaceQuota,
-  ]);
+    return <span>{t['com.affine.payment.member.description2']()}</span>;
+  }, [isTeam, t, workspaceQuota]);
 
   const title = useMemo(() => {
     if (isTeam) {
       return `${t['Members']()} (${workspaceQuota?.memberCount})`;
     }
-    return `${t['Members']()} (${workspaceQuota?.memberCount}/${workspaceQuota?.memberLimit})`;
-  }, [isTeam, t, workspaceQuota?.memberCount, workspaceQuota?.memberLimit]);
+    return `${t['Members']()} (${workspaceQuota?.memberCount})`;
+  }, [isTeam, t, workspaceQuota?.memberCount]);
 
   if (workspaceQuota === null) {
     if (isLoading) {
@@ -302,16 +172,6 @@ export const CloudWorkspaceMembersPanel = ({
         {isOwnerOrAdmin ? (
           <>
             <Button onClick={openInviteModal}>{t['Invite Members']()}</Button>
-            {!isTeam ? (
-              <MemberLimitModal
-                isFreePlan={!plan}
-                open={openMemberLimit}
-                plan={workspaceQuota.humanReadable.name ?? ''}
-                quota={workspaceQuota.humanReadable.memberLimit ?? ''}
-                setOpen={setOpenMemberLimit}
-                onConfirm={handleUpgradeConfirm}
-              />
-            ) : null}
             <InviteTeamMemberModal
               open={openInvite}
               setOpen={setOpenInvite}
@@ -328,11 +188,7 @@ export const CloudWorkspaceMembersPanel = ({
       </SettingRow>
 
       <div className={styles.membersPanel}>
-        <MemberList
-          isOwner={!!isOwner}
-          isAdmin={!!isAdmin}
-          goToTeamBilling={goToTeamBilling}
-        />
+        <MemberList isOwner={!!isOwner} isAdmin={!!isAdmin} />
       </div>
     </>
   );

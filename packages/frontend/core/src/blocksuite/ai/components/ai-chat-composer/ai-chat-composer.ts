@@ -5,10 +5,7 @@ import type {
   AIToolsConfigService,
 } from '@affine/core/modules/ai-button';
 import type { AIModelService } from '@affine/core/modules/ai-button/services/models';
-import type {
-  ServerService,
-  SubscriptionService,
-} from '@affine/core/modules/cloud';
+import type { ServerService } from '@affine/core/modules/cloud';
 import type { WorkspaceDialogService } from '@affine/core/modules/dialogs';
 import type {
   ContextEmbedStatus,
@@ -143,13 +140,7 @@ export class AIChatComposer extends SignalWatcher(
   accessor affineFeatureFlagService!: FeatureFlagService;
 
   @property({ attribute: false })
-  accessor subscriptionService!: SubscriptionService;
-
-  @property({ attribute: false })
   accessor aiModelService!: AIModelService;
-
-  @property({ attribute: false })
-  accessor onAISubscribe!: () => Promise<void>;
 
   @state()
   accessor chips: ChatChip[] = [];
@@ -200,9 +191,7 @@ export class AIChatComposer extends SignalWatcher(
         .aiDraftService=${this.aiDraftService}
         .aiToolsConfigService=${this.aiToolsConfigService}
         .notificationService=${this.notificationService}
-        .subscriptionService=${this.subscriptionService}
         .aiModelService=${this.aiModelService}
-        .onAISubscribe=${this.onAISubscribe}
         .portalContainer=${this.portalContainer}
         .onChatSuccess=${this.onChatSuccess}
         .trackOptions=${this.trackOptions}

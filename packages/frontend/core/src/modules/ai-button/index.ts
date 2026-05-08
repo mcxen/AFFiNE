@@ -8,7 +8,7 @@ export {
 
 import type { Framework } from '@toeverything/infra';
 
-import { GraphQLService, ServerScope, SubscriptionService } from '../cloud';
+import { GraphQLService, ServerScope } from '../cloud';
 import { FeatureFlagService } from '../feature-flag';
 import { CacheStorage, GlobalStateService } from '../storage';
 import { WorkspaceScope } from '../workspace';
@@ -47,9 +47,5 @@ export function configureAIToolsConfigModule(framework: Framework) {
 export function configureAIModelModule(framework: Framework) {
   framework
     .scope(ServerScope)
-    .service(AIModelService, [
-      GlobalStateService,
-      GraphQLService,
-      SubscriptionService,
-    ]);
+    .service(AIModelService, [GlobalStateService, GraphQLService]);
 }

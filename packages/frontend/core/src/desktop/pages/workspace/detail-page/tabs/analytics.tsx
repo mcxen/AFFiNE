@@ -1,27 +1,15 @@
-import {
-  Avatar,
-  Button,
-  Loading,
-  Menu,
-  MenuItem,
-  toast,
-} from '@affine/component';
+import { Avatar, Button, Loading, Menu, MenuItem } from '@affine/component';
 import { useQuery } from '@affine/core/components/hooks/use-query';
-import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
 import { WorkspacePermissionService } from '@affine/core/modules/permissions';
 import {
   getDocLastAccessedMembersQuery,
   getDocPageAnalyticsQuery,
 } from '@affine/graphql';
 import { i18nTime, useI18n } from '@affine/i18n';
-import {
-  ArrowDownSmallIcon,
-  CalendarPanelIcon,
-  LockIcon,
-} from '@blocksuite/icons/rc';
+import { ArrowDownSmallIcon, CalendarPanelIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { cssVar } from '@toeverything/theme';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Area,
   CartesianGrid,
@@ -43,7 +31,6 @@ import {
   ensureMinimumChartPoints,
   getAvailableAnalyticsWindowOptions,
   INITIAL_MEMBERS_PAGE_SIZE,
-  isLockedAnalyticsWindowOption,
   MAX_MEMBERS_PAGE_SIZE,
 } from './analytics.utils';
 
@@ -116,9 +103,8 @@ export const EditorAnalyticsPanel = ({
 }) => {
   const t = useI18n();
   const permission = useService(WorkspacePermissionService).permission;
-  const workspaceDialogService = useService(WorkspaceDialogService);
   const isTeam = useLiveData(permission.isTeam$);
-  const isTeamWorkspace = isTeam ?? false;
+  void isTeam;
   const [windowDays, setWindowDays] = useState(DEFAULT_ANALYTICS_WINDOW_DAYS);
   const [membersPageSize, setMembersPageSize] = useState(
     INITIAL_MEMBERS_PAGE_SIZE
@@ -128,8 +114,8 @@ export const EditorAnalyticsPanel = ({
     []
   );
   const effectiveWindowDays = useMemo(
-    () => clampAnalyticsWindowDays(windowDays, isTeamWorkspace),
-    [isTeamWorkspace, windowDays]
+    () => clampAnalyticsWindowDays(windowDays),
+    [windowDays]
   );
   const timezone = useMemo(
     () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
@@ -218,15 +204,6 @@ export const EditorAnalyticsPanel = ({
   const hasMoreMembers =
     Boolean(membersConnection?.pageInfo.hasNextPage) &&
     membersPageSize < MAX_MEMBERS_PAGE_SIZE;
-  const openTeamPricing = useCallback(() => {
-    workspaceDialogService.open('setting', {
-      activeTab: 'plans',
-      scrollAnchor: 'cloudPricingPlan',
-    });
-  }, [workspaceDialogService]);
-  const showTeamPlanToast = useCallback(() => {
-    toast(t['com.affine.doc.analytics.paywall.toast']());
-  }, [t]);
 
   return (
     <div className={styles.root}>
@@ -247,47 +224,15 @@ export const EditorAnalyticsPanel = ({
             items={
               <>
                 {allowedWindowOptions.map(option => {
-                  const isLocked = isLockedAnalyticsWindowOption(
-                    option,
-                    isTeamWorkspace
-                  );
-
                   return (
                     <MenuItem
                       key={option}
                       selected={effectiveWindowDays === option}
-                      suffixIcon={
-                        isLocked ? (
-                          <button
-                            type="button"
-                            className={styles.lockButton}
-                            aria-label={t[
-                              'com.affine.doc.analytics.paywall.open-pricing'
-                            ]()}
-                            onClick={event => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              openTeamPricing();
-                            }}
-                          >
-                            <LockIcon />
-                          </button>
-                        ) : undefined
-                      }
-                      onSelect={() => {
-                        if (isLocked) {
-                          showTeamPlanToast();
-                          return;
-                        }
-                        setWindowDays(option);
-                      }}
+                      onSelect={() => setWindowDays(option)}
                     >
                       {t.t('com.affine.doc.analytics.window.last-days', {
                         days: option,
                       })}
-                      {isLocked
-                        ? ` (${t['com.affine.payment.cloud.team-workspace.name']()})`
-                        : ''}
                     </MenuItem>
                   );
                 })}

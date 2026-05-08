@@ -1,7 +1,4 @@
-import {
-  SubscriptionService,
-  UserCopilotQuotaService,
-} from '@affine/core/modules/cloud';
+import { UserCopilotQuotaService } from '@affine/core/modules/cloud';
 import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
 import { useI18n } from '@affine/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
@@ -15,12 +12,6 @@ import * as styles from './index.css';
 export const AIUsage = () => {
   const t = useI18n();
   const copilotQuotaService = useService(UserCopilotQuotaService);
-  const subscriptionService = useService(SubscriptionService);
-
-  useEffect(() => {
-    // revalidate latest subscription status
-    subscriptionService.subscription.revalidate();
-  }, [subscriptionService]);
   useEffect(() => {
     copilotQuotaService.copilotQuota.revalidate();
   }, [copilotQuotaService]);
@@ -35,13 +26,6 @@ export const AIUsage = () => {
   const loadError = useLiveData(copilotQuotaService.copilotQuota.error$);
 
   const workspaceDialogService = useService(WorkspaceDialogService);
-
-  const goToAIPlanPage = useCallback(() => {
-    workspaceDialogService.open('setting', {
-      activeTab: 'plans',
-      scrollAnchor: 'aiPricingPlan',
-    });
-  }, [workspaceDialogService]);
 
   const goToAccountSetting = useCallback(() => {
     workspaceDialogService.open('setting', {
@@ -86,7 +70,7 @@ export const AIUsage = () => {
 
   return (
     <div
-      onClick={goToAIPlanPage}
+      onClick={goToAccountSetting}
       className={clsx(styles.usageBlock, styles.aiUsageBlock)}
       style={assignInlineVars({
         [styles.progressColorVar]: color,
@@ -101,8 +85,6 @@ export const AIUsage = () => {
           <span>&nbsp;/&nbsp;</span>
           <span>{copilotActionLimit}</span>
         </div>
-
-        <div className={styles.freeTag}>Free</div>
       </div>
 
       <div className={styles.cloudUsageBar}>

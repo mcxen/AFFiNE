@@ -12,7 +12,7 @@ import { WorkspaceRole } from '../../../models';
 import {
   SubscriptionPlan,
   SubscriptionRecurring,
-} from '../../../plugins/payment/types';
+} from '../../../plugins/license/types';
 import { Mockers } from '../../mocks';
 import { app, e2e } from '../test';
 

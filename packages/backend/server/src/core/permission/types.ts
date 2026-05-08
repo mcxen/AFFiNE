@@ -41,9 +41,6 @@ export const Actions = {
       Write: '',
     },
     Copilot: '',
-    Payment: {
-      Manage: '',
-    },
   },
 
   // Doc Actions
@@ -113,7 +110,6 @@ export const RoleActionsMap = {
         Action.Workspace.Delete,
         Action.Workspace.Administrators.Manage,
         Action.Workspace.TransferOwner,
-        Action.Workspace.Payment.Manage,
       ];
     },
   },

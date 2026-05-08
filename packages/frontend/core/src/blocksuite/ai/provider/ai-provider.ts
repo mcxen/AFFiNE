@@ -41,7 +41,7 @@ export type ActionEventType =
   | 'started'
   | 'finished'
   | 'error'
-  | 'aborted:paywall'
+  | 'aborted:usage-limit'
   | 'aborted:login-required'
   | 'aborted:server-error'
   | 'aborted:stop'
@@ -224,7 +224,7 @@ export class AIProvider {
                 slots.actions.next({
                   action: id,
                   options,
-                  event: 'aborted:paywall',
+                  event: 'aborted:usage-limit',
                 });
               } else if (err instanceof UnauthorizedError) {
                 slots.actions.next({
@@ -272,7 +272,7 @@ export class AIProvider {
               slots.actions.next({
                 action: id,
                 options,
-                event: 'aborted:paywall',
+                event: 'aborted:usage-limit',
               });
             } else {
               captureException(err, {

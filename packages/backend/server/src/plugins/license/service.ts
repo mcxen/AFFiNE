@@ -9,7 +9,7 @@ import {
   SubscriptionPlan,
   SubscriptionRecurring,
   SubscriptionVariant,
-} from '../payment/types';
+} from './types';
 
 const LOCAL_LICENSE_QUANTITY = 100000;
 const LOCAL_LICENSE_EXPIRES_AT = new Date('2099-12-31T23:59:59.999Z');
@@ -87,13 +87,6 @@ export class LicenseService {
   async updateTeamRecurring(key: string, recurring: SubscriptionRecurring) {
     void key;
     void recurring;
-  }
-
-  async createCustomerPortal(
-    workspaceId: string
-  ): Promise<{ url: string; res: null }> {
-    await this.ensureTeamLicense(workspaceId);
-    return { url: 'about:blank', res: null };
   }
 
   @OnEvent('workspace.members.updated')

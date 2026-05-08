@@ -159,7 +159,7 @@ const byokManagementMatrix: ByokMatrixCase[] = [
     canConfigureLocal: true,
   },
   {
-    name: 'admin in believer owner-backed personal workspace',
+    name: 'admin in owner-backed personal workspace',
     role: WorkspaceRole.Admin,
     ownerPlan: true,
     ownerPlanFeature: 'unlimited_copilot',

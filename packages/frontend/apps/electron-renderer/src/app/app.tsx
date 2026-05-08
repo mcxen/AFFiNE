@@ -18,8 +18,6 @@ const { frameworkProvider } = setupEffects();
 const desktopWhiteList = [
   '/open-app/signin-redirect',
   '/open-app/url',
-  '/upgrade-success',
-  '/ai-upgrade-success',
   '/share',
   '/oauth',
   '/magic-link',

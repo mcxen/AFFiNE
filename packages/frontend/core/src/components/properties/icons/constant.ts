@@ -84,7 +84,6 @@ export const WorkspacePropertyIconNames = [
   'heartbreak',
   'edgeless',
   'journal',
-  'payment',
   'member',
 ] as const satisfies fromLibIconName<LibIconComponentName>[];
 

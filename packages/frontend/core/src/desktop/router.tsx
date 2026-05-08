@@ -69,36 +69,12 @@ export const topLevelRoutes = [
         lazy: () => import('./pages/invite'),
       },
       {
-        path: '/upgrade-success',
-        lazy: () => import('./pages/upgrade-success'),
-      },
-      {
-        path: '/upgrade-success/team',
-        lazy: () => import('./pages/upgrade-success/team'),
-      },
-      {
-        path: '/upgrade-success/self-hosted-team',
-        lazy: () => import('./pages/upgrade-success/self-host-team'),
-      },
-      {
-        path: '/ai-upgrade-success',
-        lazy: () => import('./pages/ai-upgrade-success'),
-      },
-      {
         path: '/onboarding',
         lazy: () => import('./pages/onboarding'),
       },
       {
         path: '/redirect-proxy',
         lazy: () => import('./pages/redirect'),
-      },
-      {
-        path: '/subscribe',
-        lazy: () => import('./pages/subscribe'),
-      },
-      {
-        path: '/upgrade-to-team',
-        lazy: () => import('./pages/upgrade-to-team'),
       },
       {
         path: '/try-cloud',

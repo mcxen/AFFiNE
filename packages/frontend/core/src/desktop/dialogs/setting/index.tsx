@@ -14,7 +14,6 @@ import type {
 } from '@affine/core/modules/dialogs/constant';
 import { GlobalContextService } from '@affine/core/modules/global-context';
 import { createIsland, type Island } from '@affine/core/utils/island';
-import { ServerDeploymentType } from '@affine/graphql';
 import { Trans, useTranslation } from '@affine/i18n';
 import { ContactWithUsIcon } from '@blocksuite/icons/rc';
 import { FrameworkScope, useLiveData, useService } from '@toeverything/infra';
@@ -87,12 +86,6 @@ const SettingModalInner = ({
   const loginStatus = useLiveData(
     currentServer.scope.get(AuthService).session.status$
   );
-  const isSelfhosted = useLiveData(
-    currentServer.config$.selector(
-      c => c.type === ServerDeploymentType.Selfhosted
-    )
-  );
-
   const modalContentRef = useRef<HTMLDivElement>(null);
   const modalContentWrapperRef = useRef<HTMLDivElement>(null);
 
@@ -170,16 +163,6 @@ const SettingModalInner = ({
       }) satisfies SubPageContextType,
     [subPageIslands, addSubPageIsland]
   );
-
-  useEffect(() => {
-    if (
-      isSelfhosted &&
-      (settingState.activeTab === 'plans' ||
-        settingState.activeTab === 'workspace:billing')
-    ) {
-      setSettingState({ activeTab: 'workspace:preference' });
-    }
-  }, [isSelfhosted, settingState.activeTab]);
 
   useEffect(() => {
     if (settingState.scrollAnchor) {

@@ -255,7 +255,7 @@ function settings(overrides: Record<string, unknown> = {}) {
     entitled: true,
     serverEntitled: true,
     localEntitled: false,
-    entitlementRequired: ['Pro', 'Team', 'Believer'],
+    entitlementRequired: ['Team'],
     allowedProviders: ['openai', 'anthropic', 'gemini', 'fal'],
     localStorageSupported: false,
     customEndpointSupported: false,

@@ -7,39 +7,18 @@ import {
   DEFAULT_ANALYTICS_WINDOW_DAYS,
   ensureMinimumChartPoints,
   getAvailableAnalyticsWindowOptions,
-  isLockedAnalyticsWindowOption,
-  NON_TEAM_ANALYTICS_WINDOW_DAYS,
 } from './analytics.utils';
 
 describe('analytics.utils', () => {
   test('clampAnalyticsWindowDays returns default for unsupported values', () => {
-    expect(clampAnalyticsWindowDays(28, true)).toBe(28);
-    expect(clampAnalyticsWindowDays(15, true)).toBe(
-      DEFAULT_ANALYTICS_WINDOW_DAYS
-    );
-  });
-
-  test('clampAnalyticsWindowDays returns only 7 days for non-team workspaces', () => {
-    expect(clampAnalyticsWindowDays(7, false)).toBe(
-      NON_TEAM_ANALYTICS_WINDOW_DAYS
-    );
-    expect(clampAnalyticsWindowDays(28, false)).toBe(
-      NON_TEAM_ANALYTICS_WINDOW_DAYS
-    );
+    expect(clampAnalyticsWindowDays(28)).toBe(28);
+    expect(clampAnalyticsWindowDays(15)).toBe(DEFAULT_ANALYTICS_WINDOW_DAYS);
   });
 
   test('getAvailableAnalyticsWindowOptions keeps all options visible', () => {
     expect(getAvailableAnalyticsWindowOptions()).toEqual([
       ...ANALYTICS_WINDOW_OPTIONS,
     ]);
-  });
-
-  test('isLockedAnalyticsWindowOption locks windows over 7 days for non-team workspaces', () => {
-    expect(
-      isLockedAnalyticsWindowOption(NON_TEAM_ANALYTICS_WINDOW_DAYS, false)
-    ).toBe(false);
-    expect(isLockedAnalyticsWindowOption(14, false)).toBe(true);
-    expect(isLockedAnalyticsWindowOption(14, true)).toBe(false);
   });
 
   test('buildAnalyticsChartPoints sorts series by date and maps values', () => {

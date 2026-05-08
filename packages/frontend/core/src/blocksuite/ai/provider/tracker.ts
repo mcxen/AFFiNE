@@ -35,7 +35,7 @@ type AIActionEventProperties = {
     | 'format toolbar'
     | 'AI chat send button'
     | 'Block action bar'
-    | 'paywall'
+    | 'usage limit'
     | 'policy wall'
     | 'server error'
     | 'login required'
@@ -188,8 +188,8 @@ function inferControl(
 ): AIActionEventProperties['control'] {
   if (event.event === 'aborted:stop') {
     return 'stop button';
-  } else if (event.event === 'aborted:paywall') {
-    return 'paywall';
+  } else if (event.event === 'aborted:usage-limit') {
+    return 'usage limit';
   } else if (event.event === 'aborted:server-error') {
     return 'server error';
   } else if (event.event === 'aborted:login-required') {
@@ -258,10 +258,6 @@ const toTrackedOptions = (
 };
 
 export function setupTracker() {
-  AIProvider.slots.requestUpgradePlan.subscribe(() => {
-    track.$.paywall.aiAction.viewPlans();
-  });
-
   AIProvider.slots.requestLogin.subscribe(() => {
     track.doc.editor.aiActions.requestSignIn();
   });

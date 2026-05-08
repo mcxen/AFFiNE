@@ -272,5 +272,4 @@ test('should apply readonly workspace restrictions while keeping cleanup actions
   t.true(permissions['Workspace.Users.Manage']);
   t.true(permissions['Workspace.Blobs.List']);
   t.true(permissions['Workspace.TransferOwner']);
-  t.true(permissions['Workspace.Payment.Manage']);
 });

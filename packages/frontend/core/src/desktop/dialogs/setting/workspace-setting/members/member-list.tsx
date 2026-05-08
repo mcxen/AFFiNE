@@ -22,11 +22,9 @@ import * as styles from './styles.css';
 export const MemberList = ({
   isOwner,
   isAdmin,
-  goToTeamBilling,
 }: {
   isOwner: boolean;
   isAdmin: boolean;
-  goToTeamBilling: () => void;
 }) => {
   const membersService = useService(WorkspaceMembersService);
   const memberCount = useLiveData(membersService.members.memberCount$);
@@ -84,7 +82,6 @@ export const MemberList = ({
             member={member}
             isOwner={isOwner}
             isAdmin={isAdmin}
-            goToTeamBilling={goToTeamBilling}
           />
         ))
       )}
@@ -130,13 +127,11 @@ const MemberItem = ({
   isOwner,
   isAdmin,
   currentAccount,
-  goToTeamBilling,
 }: {
   member: Member;
   isAdmin: boolean;
   isOwner: boolean;
   currentAccount: AuthAccountInfo;
-  goToTeamBilling: () => void;
 }) => {
   const t = useI18n();
   const [open, setOpen] = useState(false);
@@ -225,7 +220,6 @@ const MemberItem = ({
             openAssignModal={handleOpenAssignModal}
             isAdmin={isAdmin}
             isOwner={isOwner}
-            goToTeamBilling={goToTeamBilling}
           />
         }
       >

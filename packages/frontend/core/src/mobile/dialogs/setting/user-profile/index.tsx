@@ -6,7 +6,6 @@ import { ArrowRightSmallIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { type ReactNode } from 'react';
 
-import { UserPlanTag } from '../../../components';
 import { SettingGroup } from '../group';
 import * as styles from './style.css';
 
@@ -65,7 +64,6 @@ const AuthorizedUserProfile = () => {
       title={
         <div className={styles.nameWithTag}>
           <span className={styles.name}>{account?.label}</span>
-          <UserPlanTag />
         </div>
       }
       onClick={confirmSignOut}
