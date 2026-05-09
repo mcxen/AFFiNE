@@ -1,6 +1,7 @@
 import { toggleGeneralAIOnboarding } from '@affine/core/components/affine/ai-onboarding/apis';
 import type { AuthAccountInfo, AuthService } from '@affine/core/modules/cloud';
 import type { GlobalDialogService } from '@affine/core/modules/dialogs';
+import { apis } from '@affine/electron-api';
 import {
   type AddContextFileInput,
   ContextCategories,
@@ -24,6 +25,52 @@ function toAIUserInfo(account: AuthAccountInfo | null) {
     email: account.email ?? '',
     id: account.id,
     name: account.label,
+  };
+}
+
+function isElectronBuild() {
+  return typeof BUILD_CONFIG !== 'undefined' && BUILD_CONFIG.isElectron;
+}
+
+async function hasLocalChatProvider(workspaceId?: string) {
+  const storage = isElectronBuild() ? apis?.byokStorage : undefined;
+  if (!workspaceId || !storage) {
+    return false;
+  }
+  if (typeof storage.hasWorkspaceChatProvider !== 'function') {
+    return false;
+  }
+  try {
+    return (
+      (await storage.isSupported()) &&
+      (await storage.hasWorkspaceChatProvider(workspaceId))
+    );
+  } catch {
+    return false;
+  }
+}
+
+function createLocalSession(
+  options: BlockSuitePresets.AICreateSessionOptions,
+  sessionId = `local-${crypto.randomUUID()}`
+) {
+  const now = new Date().toISOString();
+  return {
+    __typename: 'CopilotHistories' as const,
+    sessionId,
+    workspaceId: options.workspaceId,
+    docId: options.docId ?? null,
+    parentSessionId: null,
+    promptName: options.promptName,
+    model: 'local',
+    optionalModels: [],
+    action: null,
+    pinned: false,
+    title: null,
+    tokens: 0,
+    messages: [],
+    createdAt: now,
+    updatedAt: now,
   };
 }
 
@@ -60,6 +107,9 @@ export function setupAIProvider(
   }: BlockSuitePresets.AICreateSessionOptions) {
     if (sessionId) return sessionId;
     if (retry) return AIProvider.LAST_ACTION_SESSIONID;
+    if (await hasLocalChatProvider(workspaceId)) {
+      return `local-${crypto.randomUUID()}`;
+    }
 
     return client.createSession({
       workspaceId,
@@ -550,6 +600,10 @@ Could you make a new website based on these notes and send back just the html fi
   AIProvider.provide('session', {
     createSession,
     createSessionWithHistory: async options => {
+      if (await hasLocalChatProvider(options.workspaceId)) {
+        return createLocalSession(options);
+      }
+
       if (!options.sessionId && !options.retry) {
         return client.createSessionWithHistory({
           workspaceId: options.workspaceId,
@@ -565,6 +619,13 @@ Could you make a new website based on these notes and send back just the html fi
       return client.getSession(options.workspaceId, sessionId);
     },
     getSession: async (workspaceId: string, sessionId: string) => {
+      if (sessionId.startsWith('local-')) {
+        return createLocalSession({
+          workspaceId,
+          sessionId,
+          promptName: 'Chat With AFFiNE AI',
+        });
+      }
       return client.getSession(workspaceId, sessionId);
     },
     getSessions: async (

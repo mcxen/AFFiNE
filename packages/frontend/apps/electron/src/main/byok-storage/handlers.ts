@@ -157,6 +157,65 @@ async function probeOpenAIChatModel(key: WorkspaceByokKey, modelId: string) {
   }
 }
 
+function localChatError(message: string) {
+  return new Error(`Local AI provider request failed: ${message}`);
+}
+
+async function requestOpenAICompatibleChat({
+  key,
+  modelId,
+  content,
+  signal,
+}: {
+  key: WorkspaceByokKey;
+  modelId: string;
+  content: string;
+  signal?: AbortSignal;
+}) {
+  const endpoint = normalizeOpenAIEndpoint(key.endpoint);
+  const response = await fetch(`${endpoint}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${key.apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: modelId,
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You are AFFiNE AI. Answer clearly and helpfully. Use markdown when it improves readability.',
+        },
+        { role: 'user', content },
+      ],
+      stream: false,
+    }),
+    signal,
+  });
+
+  if (!response.ok) {
+    let detail = '';
+    try {
+      detail = (await response.text()).slice(0, 500);
+    } catch {
+      // Ignore body parse failures and report the status below.
+    }
+    throw localChatError(
+      `HTTP ${response.status}${detail ? ` ${detail}` : ''}`
+    );
+  }
+
+  const body = (await response.json()) as {
+    choices?: { message?: { content?: string | null } }[];
+  };
+  const text = body.choices?.[0]?.message?.content;
+  if (!text) {
+    throw localChatError('empty provider response');
+  }
+  return text;
+}
+
 function readWorkspaceKeys(workspaceId: string): WorkspaceByokKey[] {
   const encryptedKeys = byokStorage.get<string[]>(workspaceId) ?? [];
   return sortWorkspaceKeys(
@@ -183,6 +242,71 @@ function toPublicKey({ apiKey: _, ...key }: WorkspaceByokKey) {
 
 export const byokStorageHandlers = {
   isSupported: async () => true,
+  hasWorkspaceChatProvider: async (_e, workspaceId: string) => {
+    return readWorkspaceKeys(workspaceId).some(
+      key => key.enabled !== false && key.provider === 'openai'
+    );
+  },
+  chatCompletions: async (
+    _e,
+    workspaceId: string,
+    input: {
+      modelId?: string;
+      content?: string;
+      contexts?: {
+        docs?: { docTitle?: string; docContent?: string }[];
+        files?: { fileName?: string; fileContent?: string }[];
+        selectedMarkdown?: string;
+        html?: string;
+      };
+    }
+  ) => {
+    const modelId = input.modelId?.trim();
+    if (!modelId) {
+      throw new Error('Model id is required for local AI requests.');
+    }
+
+    const keys = readWorkspaceKeys(workspaceId).filter(
+      key => key.enabled !== false && key.provider === 'openai'
+    );
+    if (!keys.length) {
+      throw new Error('No enabled local OpenAI-compatible provider key found.');
+    }
+
+    const contextParts = [
+      ...(input.contexts?.docs ?? []).map(
+        doc =>
+          `<document title="${doc.docTitle ?? 'Untitled'}">\n${doc.docContent ?? ''}\n</document>`
+      ),
+      ...(input.contexts?.files ?? []).map(
+        file =>
+          `<file name="${file.fileName ?? 'Untitled'}">\n${file.fileContent ?? ''}\n</file>`
+      ),
+      input.contexts?.selectedMarkdown
+        ? `<selection>\n${input.contexts.selectedMarkdown}\n</selection>`
+        : '',
+      input.contexts?.html ? `<html>\n${input.contexts.html}\n</html>` : '',
+    ].filter(Boolean);
+    const content = [
+      ...contextParts,
+      input.content?.trim() || 'Continue.',
+    ].join('\n\n');
+
+    const failures: string[] = [];
+    for (const key of keys) {
+      try {
+        return await requestOpenAICompatibleChat({
+          key,
+          modelId,
+          content,
+        });
+      } catch (error) {
+        failures.push(`${key.name}: ${sanitizeProbeError(error)}`);
+      }
+    }
+
+    throw new Error(failures.join('\n'));
+  },
   listWorkspaceKeys: async (_e, workspaceId: string) => {
     return readWorkspaceKeys(workspaceId).map(toPublicKey);
   },

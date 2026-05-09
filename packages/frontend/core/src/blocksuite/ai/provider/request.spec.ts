@@ -308,4 +308,41 @@ describe('AI request BYOK local lease handling', () => {
     expect(client.gql).toHaveBeenCalled();
     expect(client.imagesStream).not.toHaveBeenCalled();
   });
+
+  test('uses desktop local BYOK chat without creating a cloud lease', async () => {
+    const byokStorage = {
+      isSupported: vi.fn().mockResolvedValue(true),
+      hasWorkspaceChatProvider: vi.fn().mockResolvedValue(true),
+      getWorkspaceLeaseProviders: vi.fn(),
+      chatCompletions: vi.fn().mockResolvedValue('local answer'),
+    } as any;
+    electronApis.byokStorage = byokStorage;
+    const client = createClient({
+      chatTextStream: vi.fn().mockReturnValue({
+        addEventListener: vi.fn(),
+        close: vi.fn(),
+        readyState: 2,
+      }),
+    });
+
+    const result = textToText({
+      client,
+      sessionId: 'local-session-1',
+      workspaceId: 'workspace-1',
+      content: 'hello',
+      modelId: 'deepseek-v4-pro',
+    }) as Promise<string>;
+
+    await expect(result).resolves.toBe('local answer');
+    expect(client.gql).not.toHaveBeenCalled();
+    expect(client.createMessage).not.toHaveBeenCalled();
+    expect(client.chatTextStream).not.toHaveBeenCalled();
+    expect(byokStorage.chatCompletions).toHaveBeenCalledWith(
+      'workspace-1',
+      expect.objectContaining({
+        modelId: 'deepseek-v4-pro',
+        content: 'hello',
+      })
+    );
+  });
 });

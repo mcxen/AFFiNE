@@ -20,6 +20,25 @@ function byokStorageApi(): ClientHandler['byokStorage'] | undefined {
   return isElectronBuild() ? apis?.byokStorage : undefined;
 }
 
+async function hasLocalChatProvider(workspaceId?: string) {
+  const storage = byokStorageApi();
+  if (!workspaceId || !storage) {
+    return false;
+  }
+  if (typeof storage.hasWorkspaceChatProvider !== 'function') {
+    return false;
+  }
+  try {
+    return (
+      (await storage.isSupported()) &&
+      (await storage.hasWorkspaceChatProvider(workspaceId))
+    );
+  } catch (error) {
+    console.warn('Failed to check local AI provider', errorMetadata(error));
+    return false;
+  }
+}
+
 function toGraphqlByokProvider(provider: string): ByokProvider | null {
   switch (provider) {
     case ByokProvider.openai:
@@ -105,6 +124,44 @@ async function createWorkspaceByokLocalLease(
     );
     throw localByokLeaseError();
   }
+}
+
+function buildLocalChatStream(text: string) {
+  return {
+    [Symbol.asyncIterator]: async function* () {
+      yield text;
+    },
+  };
+}
+
+async function localTextToText({
+  workspaceId,
+  content,
+  params,
+  modelId,
+}: TextToTextOptions) {
+  const storage = byokStorageApi();
+  if (!workspaceId || !storage) {
+    return undefined;
+  }
+  if (!(await hasLocalChatProvider(workspaceId))) {
+    return undefined;
+  }
+
+  if (!modelId?.trim()) {
+    throw new Error('Model id is required for local AI requests.');
+  }
+
+  return storage.chatCompletions(workspaceId, {
+    modelId,
+    content,
+    contexts: {
+      docs: params?.docs,
+      files: params?.files,
+      selectedMarkdown: params?.selectedMarkdown,
+      html: params?.html,
+    },
+  });
 }
 
 export type TextToTextOptions = {
@@ -236,6 +293,30 @@ export function textToText({
   if (stream) {
     return {
       [Symbol.asyncIterator]: async function* () {
+        const localResult = await localTextToText({
+          client,
+          sessionId,
+          workspaceId,
+          content,
+          attachments,
+          params,
+          stream,
+          signal,
+          timeout,
+          retry,
+          endpoint,
+          actionId,
+          actionVersion,
+          runId,
+          reasoning,
+          modelId,
+          toolsConfig,
+        });
+        if (localResult !== undefined) {
+          yield* buildLocalChatStream(localResult);
+          return;
+        }
+
         if (!retry) {
           messageId = await createMessage({
             client,
@@ -305,6 +386,29 @@ export function textToText({
     };
   } else {
     return (async function () {
+      const localResult = await localTextToText({
+        client,
+        sessionId,
+        workspaceId,
+        content,
+        attachments,
+        params,
+        stream,
+        signal,
+        timeout,
+        retry,
+        endpoint,
+        actionId,
+        actionVersion,
+        runId,
+        reasoning,
+        modelId,
+        toolsConfig,
+      });
+      if (localResult !== undefined) {
+        return localResult;
+      }
+
       if (!retry) {
         messageId = await createMessage({
           client,
