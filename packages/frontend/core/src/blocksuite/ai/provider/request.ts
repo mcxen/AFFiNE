@@ -149,7 +149,7 @@ async function localTextToText({
   }
 
   if (!modelId?.trim()) {
-    throw new Error('Model id is required for local AI requests.');
+    return undefined;
   }
 
   return storage.chatCompletions(workspaceId, {

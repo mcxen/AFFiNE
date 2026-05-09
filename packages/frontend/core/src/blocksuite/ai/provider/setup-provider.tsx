@@ -1,4 +1,5 @@
 import { toggleGeneralAIOnboarding } from '@affine/core/components/affine/ai-onboarding/apis';
+import type { AIModelService } from '@affine/core/modules/ai-button/services/models';
 import type { AuthAccountInfo, AuthService } from '@affine/core/modules/cloud';
 import type { GlobalDialogService } from '@affine/core/modules/dialogs';
 import { apis } from '@affine/electron-api';
@@ -50,6 +51,16 @@ async function hasLocalChatProvider(workspaceId?: string) {
   }
 }
 
+function isLocalSessionId(sessionId?: string) {
+  return !!sessionId?.startsWith('local-');
+}
+
+async function shouldUseLocalAI(workspaceId?: string, sessionId?: string) {
+  return (
+    isLocalSessionId(sessionId) || (await hasLocalChatProvider(workspaceId))
+  );
+}
+
 function createLocalSession(
   options: BlockSuitePresets.AICreateSessionOptions,
   sessionId = `local-${crypto.randomUUID()}`
@@ -74,6 +85,16 @@ function createLocalSession(
   };
 }
 
+function createEmptyLocalContext(): BlockSuitePresets.AIDocsAndFilesContext {
+  return {
+    docs: [],
+    files: [],
+    tags: [],
+    collections: [],
+    blobs: [],
+  };
+}
+
 const filterStyleToPromptName = new Map<string, PromptKey>(
   Object.entries({
     'Clay style': 'image.filter.clay',
@@ -94,7 +115,8 @@ const processTypeToPromptName = new Map<string, PromptKey>(
 export function setupAIProvider(
   client: CopilotClient,
   globalDialogService: GlobalDialogService,
-  authService: AuthService
+  authService: AuthService,
+  aiModelService?: AIModelService
 ) {
   async function createSession({
     promptName,
@@ -140,7 +162,7 @@ export function setupAIProvider(
     });
     return textToText({
       ...options,
-      modelId: options.modelId,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: input,
@@ -164,6 +186,7 @@ export function setupAIProvider(
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: options.input,
@@ -177,6 +200,7 @@ export function setupAIProvider(
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: options.input,
@@ -193,6 +217,7 @@ export function setupAIProvider(
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       params: {
@@ -209,6 +234,7 @@ export function setupAIProvider(
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: options.input,
@@ -222,6 +248,7 @@ export function setupAIProvider(
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: options.input,
@@ -235,6 +262,7 @@ export function setupAIProvider(
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: options.input,
@@ -248,6 +276,7 @@ export function setupAIProvider(
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: options.input,
@@ -261,6 +290,7 @@ export function setupAIProvider(
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: options.input,
@@ -274,6 +304,7 @@ export function setupAIProvider(
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: options.input,
@@ -287,6 +318,7 @@ export function setupAIProvider(
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: options.input,
@@ -300,6 +332,7 @@ export function setupAIProvider(
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: options.input,
@@ -313,6 +346,7 @@ export function setupAIProvider(
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: options.input,
@@ -326,6 +360,7 @@ export function setupAIProvider(
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: options.input,
@@ -339,6 +374,7 @@ export function setupAIProvider(
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: options.input,
@@ -352,6 +388,7 @@ export function setupAIProvider(
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: options.input,
@@ -365,6 +402,7 @@ export function setupAIProvider(
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: options.input,
@@ -378,6 +416,7 @@ export function setupAIProvider(
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: options.input,
@@ -391,6 +430,7 @@ export function setupAIProvider(
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: options.input,
@@ -404,6 +444,7 @@ export function setupAIProvider(
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: options.input,
@@ -425,6 +466,7 @@ export function setupAIProvider(
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       params: {
@@ -442,6 +484,7 @@ export function setupAIProvider(
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: options.input,
@@ -455,6 +498,7 @@ export function setupAIProvider(
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: options.input,
@@ -483,6 +527,7 @@ Could you make a new website based on these notes and send back just the html fi
 
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content,
@@ -496,6 +541,7 @@ Could you make a new website based on these notes and send back just the html fi
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: options.input,
@@ -577,6 +623,7 @@ Could you make a new website based on these notes and send back just the html fi
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: options.input,
@@ -590,6 +637,7 @@ Could you make a new website based on these notes and send back just the html fi
     });
     return textToText({
       ...options,
+      modelId: options.modelId ?? aiModelService?.getModelId(),
       client,
       sessionId,
       content: options.input,
@@ -619,7 +667,7 @@ Could you make a new website based on these notes and send back just the html fi
       return client.getSession(options.workspaceId, sessionId);
     },
     getSession: async (workspaceId: string, sessionId: string) => {
-      if (sessionId.startsWith('local-')) {
+      if (isLocalSessionId(sessionId)) {
         return createLocalSession({
           workspaceId,
           sessionId,
@@ -633,6 +681,9 @@ Could you make a new website based on these notes and send back just the html fi
       docId?: string,
       options?: QueryChatSessionsInput
     ) => {
+      if (await hasLocalChatProvider(workspaceId)) {
+        return [];
+      }
       return client.getSessions(workspaceId, {}, docId, options);
     },
     getRecentSessions: async (
@@ -640,18 +691,30 @@ Could you make a new website based on these notes and send back just the html fi
       limit?: number,
       offset?: number
     ) => {
+      if (await hasLocalChatProvider(workspaceId)) {
+        return [];
+      }
       return client.getRecentSessions(workspaceId, limit, offset);
     },
     updateSession: async (options: UpdateChatSessionInput) => {
+      if (isLocalSessionId(options.sessionId)) {
+        return options.sessionId;
+      }
       return client.updateSession(options);
     },
   });
 
   AIProvider.provide('context', {
     createContext: async (workspaceId: string, sessionId: string) => {
+      if (await shouldUseLocalAI(workspaceId, sessionId)) {
+        return `local-context-${sessionId}`;
+      }
       return client.createContext(workspaceId, sessionId);
     },
     getContextId: async (workspaceId: string, sessionId: string) => {
+      if (await shouldUseLocalAI(workspaceId, sessionId)) {
+        return undefined;
+      }
       return client.getContextId(workspaceId, sessionId);
     },
     addContextDoc: async (options: { contextId: string; docId: string }) => {
@@ -715,6 +778,9 @@ Could you make a new website based on these notes and send back just the html fi
       sessionId: string,
       contextId: string
     ) => {
+      if (await shouldUseLocalAI(workspaceId, sessionId)) {
+        return createEmptyLocalContext();
+      }
       return client.getContextDocsAndFiles(workspaceId, sessionId, contextId);
     },
     pollContextDocsAndFiles: async (
@@ -726,6 +792,10 @@ Could you make a new website based on these notes and send back just the html fi
       ) => void,
       abortSignal: AbortSignal
     ) => {
+      if (await shouldUseLocalAI(workspaceId, sessionId)) {
+        onPoll(createEmptyLocalContext());
+        return;
+      }
       const poll = async () => {
         const result = await client.getContextDocsAndFiles(
           workspaceId,
@@ -754,6 +824,13 @@ Could you make a new website based on these notes and send back just the html fi
       onPoll: (result: ContextWorkspaceEmbeddingStatus) => void,
       abortSignal: AbortSignal
     ) => {
+      if (await hasLocalChatProvider(workspaceId)) {
+        onPoll({
+          embedded: 0,
+          total: 0,
+        });
+        return;
+      }
       const poll = async () => {
         const result = await client.getEmbeddingStatus(workspaceId);
         onPoll(result);
@@ -774,6 +851,9 @@ Could you make a new website based on these notes and send back just the html fi
       scopedThreshold?: number,
       threshold?: number
     ) => {
+      if (await hasLocalChatProvider(workspaceId)) {
+        return {};
+      }
       return client.matchContext(
         content,
         contextId,
@@ -805,6 +885,9 @@ Could you make a new website based on these notes and send back just the html fi
       workspaceId: string,
       docId: string
     ): Promise<BlockSuitePresets.AIHistory[]> => {
+      if (await hasLocalChatProvider(workspaceId)) {
+        return [];
+      }
       // @ts-expect-error - 'action' is missing in server impl
       return (
         (await client.getHistories(workspaceId, {}, docId, {
@@ -819,6 +902,9 @@ Could you make a new website based on these notes and send back just the html fi
       sessionId: string,
       docId?: string
     ): Promise<BlockSuitePresets.AIHistory[]> => {
+      if (await shouldUseLocalAI(workspaceId, sessionId)) {
+        return [];
+      }
       // @ts-expect-error - 'action' is missing in server impl
       return (
         (await client.getHistories(workspaceId, {}, docId, {
@@ -832,6 +918,12 @@ Could you make a new website based on these notes and send back just the html fi
       docId: string | undefined,
       sessionIds: string[]
     ) => {
+      if (
+        (await hasLocalChatProvider(workspaceId)) ||
+        sessionIds.every(isLocalSessionId)
+      ) {
+        return;
+      }
       await client.cleanupSessions({ workspaceId, docId, sessionIds });
     },
     ids: async (
@@ -841,6 +933,9 @@ Could you make a new website based on these notes and send back just the html fi
         typeof getCopilotHistoriesQuery
       >['variables']['options']
     ): Promise<BlockSuitePresets.AIHistoryIds[]> => {
+      if (await hasLocalChatProvider(workspaceId)) {
+        return [];
+      }
       // @ts-expect-error - 'action' is missing in server impl
       return await client.getHistoryIds(workspaceId, {}, docId, options);
     },

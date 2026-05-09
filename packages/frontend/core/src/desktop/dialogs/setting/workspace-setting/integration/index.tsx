@@ -37,7 +37,12 @@ export const IntegrationSetting = ({
     (isCloudWorkspace || BUILD_CONFIG.isElectron);
 
   const integrationList = useMemo(
-    () => getAllowedIntegrationList(isCloudWorkspace, showByok),
+    () =>
+      getAllowedIntegrationList(
+        isCloudWorkspace,
+        showByok,
+        BUILD_CONFIG.isElectron
+      ),
     [isCloudWorkspace, showByok]
   );
 

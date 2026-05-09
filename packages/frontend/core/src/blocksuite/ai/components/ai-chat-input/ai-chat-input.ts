@@ -848,7 +848,7 @@ export class AIChatInput extends SignalWatcher(
         this.affineFeatureFlagService.flags.enable_send_detailed_object_to_ai
           .value;
 
-      const modelId = this.aiModelService.modelId.value;
+      const modelId = this.aiModelService.getModelId();
       const stream = await AIProvider.actions.chat({
         sessionId,
         input: userInput,

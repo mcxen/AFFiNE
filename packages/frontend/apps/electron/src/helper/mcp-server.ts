@@ -7,13 +7,14 @@ import {
 import path from 'node:path';
 
 import { universalId as generateUniversalId } from '@affine/nbstore';
+import type * as ServerNative from '@affine/server-native';
 import fs from 'fs-extra';
 import { nanoid } from 'nanoid';
 import {
   applyUpdate,
+  Doc as YDoc,
   encodeStateAsUpdate,
   mergeUpdates,
-  Doc as YDoc,
 } from 'yjs';
 
 import { logger } from './logger';
@@ -59,8 +60,7 @@ type McpServerConfig = {
   enabled?: boolean;
 };
 
-let serverNativePromise: Promise<typeof import('@affine/server-native')> | null =
-  null;
+let serverNativePromise: Promise<typeof ServerNative> | null = null;
 
 const loadServerNative = () => {
   serverNativePromise ??= import('@affine/server-native');
@@ -602,7 +602,7 @@ export function startMcpServer() {
   }
 
   const port = Number(process.env.AFFINE_MCP_PORT || DEFAULT_PORT);
-  const server = createServer(async (req, res) => {
+  const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
     if (req.method === 'OPTIONS') {
       writeJson(res, 204, {});
       return;
@@ -630,6 +630,13 @@ export function startMcpServer() {
       logger.error('[mcp] request failed', err);
       writeJson(res, 500, failure(null, -32603, 'Internal error'));
     }
+  };
+
+  const server = createServer((req, res) => {
+    handleRequest(req, res).catch(err => {
+      logger.error('[mcp] unexpected request failure', err);
+      writeJson(res, 500, failure(null, -32603, 'Internal error'));
+    });
   });
 
   server.listen(port, '127.0.0.1', () => {

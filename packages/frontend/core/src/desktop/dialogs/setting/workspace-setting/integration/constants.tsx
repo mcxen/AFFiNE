@@ -14,6 +14,7 @@ type IntegrationCard = {
   desc: I18nString;
   icon: ReactNode;
   cloud?: boolean;
+  desktop?: boolean;
   byok?: boolean;
 } & ({ setting: ReactNode } | { link: string });
 
@@ -40,6 +41,7 @@ const INTEGRATION_LIST = [
     icon: <img src={MCPIcon} />,
     setting: <McpServerSettingPanel />,
     cloud: true,
+    desktop: true,
   },
   {
     id: 'web-clipper' as const,
@@ -61,13 +63,15 @@ export type IntegrationItem = Exclude<IntegrationCard, 'id'> & {
 
 export function getAllowedIntegrationList(
   isCloudWorkspace: boolean,
-  showByok: boolean
+  showByok: boolean,
+  isDesktop: boolean
 ) {
   return INTEGRATION_LIST.filter(item => {
     if (!item) return false;
     if ('byok' in item && item.byok && !showByok) return false;
     const requiredCloud = 'cloud' in item && item.cloud;
-    if (requiredCloud && !isCloudWorkspace) return false;
+    const allowedOnDesktop = 'desktop' in item && item.desktop && isDesktop;
+    if (requiredCloud && !isCloudWorkspace && !allowedOnDesktop) return false;
     return true;
   }) as IntegrationItem[];
 }

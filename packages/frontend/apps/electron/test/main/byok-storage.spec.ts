@@ -291,6 +291,31 @@ describe('byok storage handlers', () => {
     );
   });
 
+  test('falls back to other local workspace keys for desktop chat', async () => {
+    generateTextMock.mockResolvedValueOnce({ text: 'fallback answer' });
+    const { byokStorageHandlers, disposeWorkspaceByokStorage: dispose } =
+      await import('@affine/electron/main/byok-storage/handlers');
+    disposeWorkspaceByokStorage = dispose;
+    const ipcEvent = undefined;
+
+    await byokStorageHandlers.upsertWorkspaceKey(ipcEvent, 'workspace-1', {
+      id: 'local-openai',
+      provider: 'openai',
+      name: 'OpenAI',
+      apiKey: 'sk-openai',
+    });
+
+    await expect(
+      byokStorageHandlers.hasWorkspaceChatProvider(ipcEvent, 'workspace-2')
+    ).resolves.toBe(true);
+    await expect(
+      byokStorageHandlers.chatCompletions(ipcEvent, 'workspace-2', {
+        modelId: 'deepseek-v4-pro',
+        content: 'hello',
+      })
+    ).resolves.toBe('fallback answer');
+  });
+
   test('skips local chat probe when no local OpenAI key exists', async () => {
     const { byokStorageHandlers, disposeWorkspaceByokStorage: dispose } =
       await import('@affine/electron/main/byok-storage/handlers');

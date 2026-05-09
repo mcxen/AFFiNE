@@ -142,8 +142,8 @@ const DetailPageImpl = memo(function DetailPageImpl() {
       if (!params) {
         return;
       }
-      workbench.openSidebar();
-      view.activeSidebarTab('chat');
+      workbench.open('/chat');
+      workbench.closeSidebar();
     };
     disposables.push(
       AIProvider.slots.requestOpenWithChat.subscribe(openHandler)

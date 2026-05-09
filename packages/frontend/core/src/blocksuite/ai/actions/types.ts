@@ -89,6 +89,7 @@ declare global {
       // action's context
       docId?: string;
       workspaceId: string;
+      modelId?: string;
 
       // internal context
       host?: EditorHost;

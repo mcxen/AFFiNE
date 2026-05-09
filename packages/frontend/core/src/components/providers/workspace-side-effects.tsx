@@ -11,6 +11,7 @@ import {
 import { useRegisterFindInPageCommands } from '@affine/core/components/hooks/affine/use-register-find-in-page-commands';
 import { useRegisterWorkspaceCommands } from '@affine/core/components/hooks/use-register-workspace-commands';
 import { OverCapacityNotification } from '@affine/core/components/over-capacity';
+import { AIModelService } from '@affine/core/modules/ai-button/services/models';
 import {
   AuthService,
   EventSourceService,
@@ -123,17 +124,25 @@ export const WorkspaceSideEffects = () => {
   const graphqlService = useService(GraphQLService);
   const eventSourceService = useService(EventSourceService);
   const authService = useService(AuthService);
+  const aiModelService = useService(AIModelService);
 
   useEffect(() => {
     const dispose = setupAIProvider(
       new CopilotClient(graphqlService.gql, eventSourceService.eventSource),
       globalDialogService,
-      authService
+      authService,
+      aiModelService
     );
     return () => {
       dispose();
     };
-  }, [eventSourceService, graphqlService, globalDialogService, authService]);
+  }, [
+    eventSourceService,
+    graphqlService,
+    globalDialogService,
+    authService,
+    aiModelService,
+  ]);
 
   useRegisterWorkspaceCommands();
   useRegisterNavigationCommands();

@@ -182,6 +182,28 @@ function readWorkspaceKeys(workspaceId: string): WorkspaceByokKey[] {
   );
 }
 
+function readAllWorkspaceKeys(): WorkspaceByokKey[] {
+  return sortWorkspaceKeys(
+    Object.values(byokStorage.all()).flatMap(value => {
+      if (!Array.isArray(value)) {
+        return [];
+      }
+      return value.flatMap(encryptedKey => {
+        if (typeof encryptedKey !== 'string') {
+          return [];
+        }
+        const key = decryptKey(encryptedKey);
+        return key ? [key] : [];
+      });
+    })
+  );
+}
+
+function readWorkspaceKeysWithFallback(workspaceId: string) {
+  const keys = readWorkspaceKeys(workspaceId);
+  return keys.length ? keys : readAllWorkspaceKeys();
+}
+
 function writeWorkspaceKeys(workspaceId: string, keys: WorkspaceByokKey[]) {
   byokStorage.set(workspaceId, keys.map(encryptKey));
 }
@@ -199,7 +221,7 @@ function toPublicKey({ apiKey: _, ...key }: WorkspaceByokKey) {
 export const byokStorageHandlers = {
   isSupported: async () => true,
   hasWorkspaceChatProvider: async (_e, workspaceId: string) => {
-    return readWorkspaceKeys(workspaceId).some(
+    return readWorkspaceKeysWithFallback(workspaceId).some(
       key => key.enabled !== false && key.provider === 'openai'
     );
   },
@@ -222,7 +244,7 @@ export const byokStorageHandlers = {
       throw new Error('Model id is required for local AI requests.');
     }
 
-    const keys = readWorkspaceKeys(workspaceId).filter(
+    const keys = readWorkspaceKeysWithFallback(workspaceId).filter(
       key => key.enabled !== false && key.provider === 'openai'
     );
     if (!keys.length) {
@@ -267,7 +289,9 @@ export const byokStorageHandlers = {
     return readWorkspaceKeys(workspaceId).map(toPublicKey);
   },
   getWorkspaceLeaseProviders: async (_e, workspaceId: string) => {
-    return readWorkspaceKeys(workspaceId).filter(key => key.enabled !== false);
+    return readWorkspaceKeysWithFallback(workspaceId).filter(
+      key => key.enabled !== false
+    );
   },
   testWorkspaceChatModel: async (_e, workspaceId: string, modelId: string) => {
     const normalizedModelId = modelId.trim();
@@ -275,7 +299,7 @@ export const byokStorageHandlers = {
       return { ok: false, message: 'Model id is required.' };
     }
 
-    const keys = readWorkspaceKeys(workspaceId).filter(
+    const keys = readWorkspaceKeysWithFallback(workspaceId).filter(
       key => key.enabled !== false && key.provider === 'openai'
     );
     if (!keys.length) {

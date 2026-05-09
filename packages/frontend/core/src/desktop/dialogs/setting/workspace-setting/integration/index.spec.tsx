@@ -105,6 +105,7 @@ import { IntegrationSetting } from '.';
 
 describe('IntegrationSetting', () => {
   beforeEach(() => {
+    vi.stubGlobal('BUILD_CONFIG', { isElectron: false });
     workspaceInfoState.info = {
       isOwner: false,
       isAdmin: false,
@@ -115,6 +116,7 @@ describe('IntegrationSetting', () => {
 
   afterEach(() => {
     cleanup();
+    vi.unstubAllGlobals();
   });
 
   const byokVisibilityCases = [
@@ -152,4 +154,29 @@ describe('IntegrationSetting', () => {
       }
     });
   }
+
+  test('shows MCP integration for local desktop workspaces', () => {
+    vi.stubGlobal('BUILD_CONFIG', { isElectron: true });
+    workspaceState.flavour = 'local';
+
+    render(<IntegrationSetting />);
+
+    expect(screen.getByText('com.affine.integration.mcp-server.name')).not.toBe(
+      null
+    );
+  });
+
+  test('hides cloud-only integrations for local web workspaces', () => {
+    vi.stubGlobal('BUILD_CONFIG', { isElectron: false });
+    workspaceState.flavour = 'local';
+
+    render(<IntegrationSetting />);
+
+    expect(screen.queryByText('com.affine.integration.mcp-server.name')).toBe(
+      null
+    );
+    expect(screen.queryByText('com.affine.integration.calendar.name')).toBe(
+      null
+    );
+  });
 });

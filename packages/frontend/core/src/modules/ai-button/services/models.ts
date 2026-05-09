@@ -44,7 +44,10 @@ export class AIModelService extends Service {
 
     const { signal: modelId, cleanup } = createSignalFromObservable<
       string | undefined
-    >(this.modelId$, undefined);
+    >(
+      this.modelId$,
+      this.globalStateService.globalState.get<string>(AI_MODEL_ID_KEY)
+    );
     this.modelId = modelId;
     this.disposables.push(cleanup);
 
@@ -89,9 +92,17 @@ export class AIModelService extends Service {
     }
   };
 
-  private getCustomModelId() {
+  getCustomModelId() {
     return this.globalStateService.globalState.get<string>(
       AI_CUSTOM_MODEL_ID_KEY
+    );
+  }
+
+  getModelId() {
+    return (
+      this.modelId.value ||
+      this.globalStateService.globalState.get<string>(AI_MODEL_ID_KEY) ||
+      this.getCustomModelId()
     );
   }
 

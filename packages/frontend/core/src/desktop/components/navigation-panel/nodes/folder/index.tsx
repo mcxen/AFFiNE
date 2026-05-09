@@ -9,10 +9,10 @@ import {
   MenuSub,
   notify,
 } from '@affine/component';
-import { exportDocsToMarkdownCollection } from '@affine/core/components/hooks/affine/use-export-page';
 import { usePageHelper } from '@affine/core/blocksuite/block-suite-page-list/utils';
-import { DocsService } from '@affine/core/modules/doc';
+import { exportDocsToMarkdownCollection } from '@affine/core/components/hooks/affine/use-export-page';
 import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
+import { DocsService } from '@affine/core/modules/doc';
 import { CompatibleFavoriteItemsAdapter } from '@affine/core/modules/favorite';
 import { FeatureFlagService } from '@affine/core/modules/feature-flag';
 import { NavigationPanelService } from '@affine/core/modules/navigation-panel';
@@ -210,14 +210,13 @@ const NavigationPanelFolderNodeFolder = ({
     featureFlagService,
     workspaceDialogService,
     docsService,
-  } =
-    useServices({
-      WorkspaceService,
-      CompatibleFavoriteItemsAdapter,
-      FeatureFlagService,
-      WorkspaceDialogService,
-      DocsService,
-    });
+  } = useServices({
+    WorkspaceService,
+    CompatibleFavoriteItemsAdapter,
+    FeatureFlagService,
+    WorkspaceDialogService,
+    DocsService,
+  });
   const navigationPanelService = useService(NavigationPanelService);
   const name = useLiveData(node.name$);
   const enableEmojiIcon = useLiveData(
@@ -798,7 +797,9 @@ const NavigationPanelFolderNodeFolder = ({
         view: (
           <MenuItem
             prefixIcon={<ExportToMarkdownIcon />}
-            onClick={handleExportFolderAsMarkdown}
+            onClick={() => {
+              handleExportFolderAsMarkdown().catch(console.error);
+            }}
           >
             Export as Markdown folder
           </MenuItem>
