@@ -5,6 +5,8 @@ This document explains how to start server (@affine/server) locally with Docker
 > This document is not guaranteed to be up-to-date.
 > If you find any outdated information, please feel free to open an issue or submit a PR.
 
+> **Note**: This document covers the server-side setup. For the complete AFFiNE experience including desktop app features like MCP server and BYOK AI, see [building-desktop-client-app.md](./building-desktop-client-app.md).
+
 ## Run required dev services in docker compose
 
 Running yarn's server package (@affine/server) requires some dev services to be running, i.e.:

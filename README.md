@@ -65,6 +65,7 @@ Star us, and you will receive all release notifications from GitHub without any 
 **Multimodal AI partner ready to kick in any work**
 
 - Write up professional work report? Turn an outline into expressive and presentable slides? Summary an article into a well-structured mindmap? Sorting your job plan and backlog for tasks? Or... draw and code prototype apps and web pages directly all with one prompt? With you, [AFFiNE AI](https://affine.pro/ai) pushes your creativity to the edge of your imagination, just like [Canvas AI](https://affine.pro/blog/best-canvas-ai) to generate mind map for brainstorming.
+- **BYOK (Bring Your Own Key)**: Use your own AI API keys for local AI features in the desktop app, with support for custom AI providers and models.
 
 **Local-first & Real-time collaborative**
 
@@ -73,6 +74,15 @@ Star us, and you will receive all release notifications from GitHub without any 
 **Self-host & Shape your own AFFiNE**
 
 - You have the freedom to manage, self-host, fork and build your own AFFiNE. Plugin community and third-party blocks are coming soon. More tractions on [Blocksuite](https://blocksuite.io). Check there to learn how to [self-host AFFiNE](https://docs.affine.pro/self-host-affine).
+
+**MCP (Model Context Protocol) Support**
+
+- AFFiNE desktop now includes a built-in MCP server, allowing AI assistants to interact with your workspaces, documents, and content directly through the Model Context Protocol.
+
+**Enhanced Import/Export**
+
+- Import from Bear notes (.bear2bk) with full folder hierarchy, tags, and metadata preservation.
+- Export documents as Markdown with folder structure preservation, or as single-file Markdown.
 
 ## Acknowledgement
 
@@ -160,6 +170,7 @@ We would also like to give thanks to open-source projects that make AFFiNE possi
 - [Jotai](https://github.com/pmndrs/jotai) - Primitive and flexible state management for React.
 - [async-call-rpc](https://github.com/Jack-Works/async-call-rpc) - A lightweight JSON RPC client & server.
 - [Vite](https://github.com/vitejs/vite) - Next generation frontend tooling.
+- [MCP SDK](https://github.com/modelcontextprotocol) - Model Context Protocol SDK for AI integration.
 - Other upstream [dependencies](https://github.com/toeverything/AFFiNE/network/dependencies).
 
 Thanks a lot to the community for providing such powerful and simple libraries, so that we can focus more on the implementation of the product logic, and we hope that in the future our projects will also provide a more easy-to-use knowledge base for everyone.

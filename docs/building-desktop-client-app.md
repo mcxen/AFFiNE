@@ -29,6 +29,22 @@ Due to [some limitations of Electron builder](https://github.com/yarnpkg/berry/i
 
 We will explain the steps in the following sections.
 
+## Desktop App Features
+
+The AFFiNE Desktop app includes several unique features:
+
+### Local MCP Server
+
+The desktop app includes a built-in MCP (Model Context Protocol) server that allows AI assistants to interact with your workspaces and documents. This server can be enabled in the workspace settings under "Integrations > MCP Server".
+
+### BYOK (Bring Your Own Key) AI Support
+
+Configure your own AI provider settings locally in the desktop app. This allows you to use your own API keys for AI features without relying on cloud services. Access this in workspace settings under "BYOK" section.
+
+### Local-first Data Storage
+
+All your data is stored locally in SQLite databases, with optional cloud sync for collaboration.
+
 ## Prerequisites
 
 Before you start building AFFiNE Desktop Client Application, please following the same steps in [BUILDING#Prerequisites](./BUILDING.md#prerequisites) to install Node.js and Rust.
