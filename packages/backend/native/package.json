@@ -9,7 +9,7 @@
   "types": "index.d.ts",
   "exports": {
     ".": {
-      "require": "./server-native.node",
+      "require": "./index.js",
       "import": "./index.js",
       "types": "./index.d.ts"
     }

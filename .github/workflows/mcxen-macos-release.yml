@@ -42,10 +42,16 @@ jobs:
         run: yarn install --immutable
 
       - name: Build native modules
-        run: yarn affine @affine/native build
+        run: |
+          yarn affine @affine/native build
+          yarn affine @affine/server-native build
+        env:
+          TARGET: aarch64-apple-darwin
 
       - name: Build Electron layers
         run: yarn affine @affine/electron build
+        env:
+          TARGET: aarch64-apple-darwin
 
       - name: Generate desktop web assets
         run: yarn affine @affine/electron generate-assets
@@ -56,8 +62,16 @@ jobs:
       - name: Make macOS installer
         run: yarn affine @affine/electron make --platform=darwin --arch=arm64
         env:
+          TARGET: aarch64-apple-darwin
           SKIP_GENERATE_ASSETS: '1'
           SKIP_WEB_BUILD: '1'
+
+      - name: Verify server-native arm64 binding
+        run: |
+          binding="packages/frontend/apps/electron/out/canary/AFFiNE-canary-darwin-arm64/AFFiNE-canary.app/Contents/Resources/app.asar.unpacked/dist/server-native.node"
+          test -f "$binding"
+          file "$binding"
+          file "$binding" | grep -q 'arm64'
 
       - name: Collect artifacts
         run: |
