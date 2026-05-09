@@ -45,6 +45,7 @@ type ToolDefinition = {
 };
 
 type DocumentMeta = {
+  workspaceId: string;
   docId: string;
   title: string;
   createdAt: unknown;
@@ -136,7 +137,22 @@ const parseNumberArg = (
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 };
 
-const getWorkspaceId = async (args: Record<string, unknown>) => {
+const getWorkspaceIds = async (args: Record<string, unknown>) => {
+  const workspaceId =
+    parseStringArg(args, 'workspaceId', false) ??
+    process.env.AFFINE_MCP_WORKSPACE_ID;
+  if (workspaceId) {
+    return [workspaceId];
+  }
+
+  const workspaceIds = await listLocalWorkspaceIds();
+  if (!workspaceIds.length) {
+    throw new Error('No local workspace found.');
+  }
+  return workspaceIds;
+};
+
+const getWritableWorkspaceId = async (args: Record<string, unknown>) => {
   const workspaceId =
     parseStringArg(args, 'workspaceId', false) ??
     process.env.AFFINE_MCP_WORKSPACE_ID;
@@ -144,11 +160,45 @@ const getWorkspaceId = async (args: Record<string, unknown>) => {
     return workspaceId;
   }
 
-  const [firstWorkspaceId] = await listLocalWorkspaceIds();
-  if (!firstWorkspaceId) {
+  const workspaceIds = await listLocalWorkspaceIds();
+  if (!workspaceIds.length) {
     throw new Error('No local workspace found.');
   }
-  return firstWorkspaceId;
+  if (workspaceIds.length > 1) {
+    throw new Error(
+      'workspaceId is required when multiple local workspaces exist.'
+    );
+  }
+  return workspaceIds[0];
+};
+
+const getWorkspaceIdForDoc = async (
+  args: Record<string, unknown>,
+  docId: string
+) => {
+  const workspaceId =
+    parseStringArg(args, 'workspaceId', false) ??
+    process.env.AFFINE_MCP_WORKSPACE_ID;
+  if (workspaceId) {
+    return workspaceId;
+  }
+
+  const matches = [];
+  for (const candidateWorkspaceId of await getWorkspaceIds(args)) {
+    if (await getMergedDocUpdate(candidateWorkspaceId, docId)) {
+      matches.push(candidateWorkspaceId);
+    }
+  }
+
+  if (matches.length === 1) {
+    return matches[0];
+  }
+  if (matches.length > 1) {
+    throw new Error(
+      `Doc ${docId} exists in multiple workspaces. Provide workspaceId.`
+    );
+  }
+  throw new Error(`Doc with id ${docId} not found.`);
 };
 
 const getLocalUniversalId = (workspaceId: string) =>
@@ -206,6 +256,7 @@ const listDocumentMetas = async (workspaceId: string) => {
   return (pages as any)
     .toArray()
     .map((page: any) => ({
+      workspaceId,
       docId: page.get('id'),
       title:
         typeof page.get('title') === 'string' ? page.get('title') : 'Untitled',
@@ -228,7 +279,7 @@ const buildTools = (): ToolDefinition[] => [
     name: 'list_workspaces',
     title: 'List Workspaces',
     description:
-      'List local AFFiNE workspace IDs available to this desktop app.',
+      'List all local AFFiNE workspace IDs available to this desktop app.',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -240,7 +291,7 @@ const buildTools = (): ToolDefinition[] => [
     name: 'list_documents',
     title: 'List Documents',
     description:
-      'List documents in a local workspace. If workspaceId is omitted, the first local workspace is used.',
+      'List documents in local workspaces. If workspaceId is omitted, documents from all local workspaces are returned.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -251,20 +302,25 @@ const buildTools = (): ToolDefinition[] => [
       additionalProperties: false,
     },
     execute: async args => {
-      const workspaceId = await getWorkspaceId(args);
+      const workspaceIds = await getWorkspaceIds(args);
       const limit = Math.max(
         1,
         Math.min(parseNumberArg(args, 'limit', 50), 100)
       );
       const offset = Math.max(0, parseNumberArg(args, 'offset', 0));
-      const docs = await listDocumentMetas(workspaceId);
+      const docs = (
+        await Promise.all(
+          workspaceIds.map(workspaceId => listDocumentMetas(workspaceId))
+        )
+      ).flat();
       return text(docs.slice(offset, offset + limit));
     },
   },
   {
     name: 'read_document',
     title: 'Read Document',
-    description: 'Read a document as Markdown.',
+    description:
+      'Read a document as Markdown. If workspaceId is omitted, all local workspaces are searched by docId.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -275,8 +331,8 @@ const buildTools = (): ToolDefinition[] => [
       additionalProperties: false,
     },
     execute: async args => {
-      const workspaceId = await getWorkspaceId(args);
       const docId = parseStringArg(args, 'docId');
+      const workspaceId = await getWorkspaceIdForDoc(args, docId);
       const docBin = await getMergedDocUpdate(workspaceId, docId);
       if (!docBin) {
         return error(`Doc with id ${docId} not found.`);
@@ -289,7 +345,8 @@ const buildTools = (): ToolDefinition[] => [
   {
     name: 'keyword_search',
     title: 'Keyword Search',
-    description: 'Search local documents by keyword.',
+    description:
+      'Search local documents by keyword. If workspaceId is omitted, all local workspaces are searched.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -301,7 +358,7 @@ const buildTools = (): ToolDefinition[] => [
       additionalProperties: false,
     },
     execute: async args => {
-      const workspaceId = await getWorkspaceId(args);
+      const workspaceIds = await getWorkspaceIds(args);
       const query = parseStringArg(args, 'query').trim().toLocaleLowerCase();
       const limit = Math.max(
         1,
@@ -312,22 +369,32 @@ const buildTools = (): ToolDefinition[] => [
       }
 
       const matches = [];
-      for (const doc of await listDocumentMetas(workspaceId)) {
-        const docBin = await getMergedDocUpdate(workspaceId, doc.docId);
-        if (!docBin) {
-          continue;
-        }
-        const { parseDocToMarkdown } = await loadServerNative();
-        const markdown = parseDocToMarkdown(docBin, doc.docId, false).markdown;
-        if (
-          doc.title.toLocaleLowerCase().includes(query) ||
-          markdown.toLocaleLowerCase().includes(query)
-        ) {
-          matches.push({
-            docId: doc.docId,
-            title: doc.title,
-            preview: markdown.slice(0, 500),
-          });
+      for (const workspaceId of workspaceIds) {
+        for (const doc of await listDocumentMetas(workspaceId)) {
+          const docBin = await getMergedDocUpdate(workspaceId, doc.docId);
+          if (!docBin) {
+            continue;
+          }
+          const { parseDocToMarkdown } = await loadServerNative();
+          const markdown = parseDocToMarkdown(
+            docBin,
+            doc.docId,
+            false
+          ).markdown;
+          if (
+            doc.title.toLocaleLowerCase().includes(query) ||
+            markdown.toLocaleLowerCase().includes(query)
+          ) {
+            matches.push({
+              workspaceId,
+              docId: doc.docId,
+              title: doc.title,
+              preview: markdown.slice(0, 500),
+            });
+          }
+          if (matches.length >= limit) {
+            break;
+          }
         }
         if (matches.length >= limit) {
           break;
@@ -351,7 +418,7 @@ const buildTools = (): ToolDefinition[] => [
       additionalProperties: false,
     },
     execute: async args => {
-      const workspaceId = await getWorkspaceId(args);
+      const workspaceId = await getWritableWorkspaceId(args);
       const title = sanitizeTitle(parseStringArg(args, 'title'));
       const content = stripLeadingH1(parseStringArg(args, 'content'));
       if (!title) {
@@ -396,8 +463,8 @@ const buildTools = (): ToolDefinition[] => [
       additionalProperties: false,
     },
     execute: async args => {
-      const workspaceId = await getWorkspaceId(args);
       const docId = parseStringArg(args, 'docId');
+      const workspaceId = await getWorkspaceIdForDoc(args, docId);
       const content = parseStringArg(args, 'content');
       const docBin = await getMergedDocUpdate(workspaceId, docId);
       if (!docBin) {
@@ -430,8 +497,8 @@ const buildTools = (): ToolDefinition[] => [
       additionalProperties: false,
     },
     execute: async args => {
-      const workspaceId = await getWorkspaceId(args);
       const docId = parseStringArg(args, 'docId');
+      const workspaceId = await getWorkspaceIdForDoc(args, docId);
       const title = sanitizeTitle(parseStringArg(args, 'title'));
       if (!title) {
         return error('title cannot be empty.');
@@ -474,8 +541,8 @@ const buildTools = (): ToolDefinition[] => [
       additionalProperties: false,
     },
     execute: async args => {
-      const workspaceId = await getWorkspaceId(args);
       const docId = parseStringArg(args, 'docId');
+      const workspaceId = await getWorkspaceIdForDoc(args, docId);
       if (docId === workspaceId) {
         return error('Cannot delete the workspace root document.');
       }
