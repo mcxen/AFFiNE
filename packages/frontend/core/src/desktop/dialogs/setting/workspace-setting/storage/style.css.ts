@@ -29,6 +29,98 @@ export const storageProgressBar = style({
   height: '100%',
 });
 
+export const storageUsageLoading = style({
+  height: 120,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+});
+
+export const storageUsagePanel = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 14,
+});
+
+export const storageUsageHeader = style({
+  display: 'flex',
+  alignItems: 'flex-start',
+  justifyContent: 'space-between',
+  gap: 16,
+});
+
+export const storageUsageTitle = style({
+  fontSize: cssVar('fontBase'),
+  fontWeight: 600,
+  color: cssVarV2('text/primary'),
+});
+
+export const storageUsageDescription = style({
+  marginTop: 4,
+  fontSize: cssVar('fontSm'),
+  color: cssVarV2('text/secondary'),
+});
+
+export const storageUsageTotal = style({
+  flexShrink: 0,
+  fontSize: cssVar('fontH5'),
+  fontWeight: 600,
+  color: cssVarV2('text/primary'),
+});
+
+export const storageUsageBar = style({
+  height: 10,
+  width: '100%',
+  display: 'flex',
+  overflow: 'hidden',
+  borderRadius: 999,
+  backgroundColor: cssVarV2('layer/background/hoverOverlay'),
+});
+
+export const storageUsageBarSegment = style({
+  height: '100%',
+  minWidth: 2,
+});
+
+export const storageUsageBarEmpty = style({
+  width: '100%',
+  height: '100%',
+  backgroundColor: cssVarV2('layer/background/hoverOverlay'),
+});
+
+export const storageUsageLegend = style({
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  gap: '8px 20px',
+});
+
+export const storageUsageLegendItem = style({
+  minWidth: 0,
+  display: 'grid',
+  gridTemplateColumns: '12px minmax(0, 1fr) auto',
+  alignItems: 'center',
+  gap: 8,
+  fontSize: cssVar('fontSm'),
+});
+
+export const storageUsageLegendDot = style({
+  width: 8,
+  height: 8,
+  borderRadius: '50%',
+});
+
+export const storageUsageLegendName = style({
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  color: cssVarV2('text/primary'),
+});
+
+export const storageUsageLegendSize = style({
+  color: cssVarV2('text/secondary'),
+  fontVariantNumeric: 'tabular-nums',
+});
+
 // blob management
 
 // when no blob is selected
