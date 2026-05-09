@@ -1,4 +1,5 @@
 import { dialogHandlers } from './dialog';
+import { mcpHandlers } from './mcp';
 import { dbEventsV1, dbHandlersV1, nbstoreHandlers } from './nbstore';
 import { previewHandlers } from './preview';
 import { provideExposed } from './provide';
@@ -10,6 +11,7 @@ export const handlers = {
   workspace: workspaceHandlers,
   dialog: dialogHandlers,
   preview: previewHandlers,
+  mcp: mcpHandlers,
 };
 
 export const events = {

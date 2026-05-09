@@ -3,7 +3,7 @@ import { AsyncCall } from 'async-call-rpc';
 import type { RendererToHelper } from '../shared/type';
 import { events, handlers } from './exposed';
 import { logger } from './logger';
-import { startMcpServer } from './mcp-server';
+import { startMcpServerFromPreference } from './mcp-server';
 
 function setupRendererConnection(rendererPort: Electron.MessagePortMain) {
   const flattenedHandlers = Object.entries(handlers).flatMap(
@@ -74,12 +74,13 @@ function setupRendererConnection(rendererPort: Electron.MessagePortMain) {
 }
 
 function main() {
-  startMcpServer();
-
   process.parentPort.on('message', e => {
     if (e.data.channel === 'renderer-connect' && e.ports.length === 1) {
       const rendererPort = e.ports[0];
       setupRendererConnection(rendererPort);
+      startMcpServerFromPreference().catch(err => {
+        logger.error('[mcp] failed to start from preference', err);
+      });
       logger.debug('[helper] renderer connected');
     }
   });

@@ -1,8 +1,10 @@
 import {
   createServer,
   type IncomingMessage,
+  type Server,
   type ServerResponse,
 } from 'node:http';
+import path from 'node:path';
 
 import {
   addDocToRootDoc,
@@ -13,6 +15,7 @@ import {
   updateRootDocMetaTitle,
 } from '@affine/server-native';
 import { universalId as generateUniversalId } from '@affine/nbstore';
+import fs from 'fs-extra';
 import { nanoid } from 'nanoid';
 import {
   applyUpdate,
@@ -24,7 +27,7 @@ import {
 import { logger } from './logger';
 import { getDocStoragePool } from './nbstore';
 import { listLocalWorkspaceIds } from './workspace';
-import { getSpaceDBPath } from './workspace/meta';
+import { getAppDataPath, getSpaceDBPath } from './workspace/meta';
 
 type JsonRpcId = string | number | null;
 
@@ -58,6 +61,11 @@ type DocumentMeta = {
 
 const DEFAULT_PORT = 30115;
 const serverVersion = '1.0.0';
+const configFileName = 'mcp-server.json';
+
+type McpServerConfig = {
+  enabled?: boolean;
+};
 
 const text = (value: unknown): ToolResult => ({
   content: [
@@ -77,6 +85,22 @@ const sanitizeTitle = (title: string) => title.replace(/[\r\n]+/g, ' ').trim();
 
 const stripLeadingH1 = (content: string) =>
   content.replace(/^[ \t]{0,3}#\s+[^\n]*#*\s*\n*/, '');
+
+const getConfigPath = async () =>
+  path.join(await getAppDataPath(), configFileName);
+
+const readConfig = async (): Promise<McpServerConfig> => {
+  try {
+    return await fs.readJson(await getConfigPath());
+  } catch {
+    return {};
+  }
+};
+
+const writeConfig = async (config: McpServerConfig) => {
+  await fs.ensureDir(await getAppDataPath());
+  await fs.writeJson(await getConfigPath(), config, { spaces: 2 });
+};
 
 function parseStringArg(
   args: Record<string, unknown>,
@@ -563,13 +587,12 @@ const handleMessage = async (message: JsonRpcRequest) => {
   }
 };
 
-let serverStarted = false;
+let mcpServer: Server | null = null;
 
 export function startMcpServer() {
-  if (serverStarted) {
+  if (mcpServer) {
     return;
   }
-  serverStarted = true;
 
   const port = Number(process.env.AFFINE_MCP_PORT || DEFAULT_PORT);
   const server = createServer(async (req, res) => {
@@ -605,13 +628,64 @@ export function startMcpServer() {
   server.listen(port, '127.0.0.1', () => {
     logger.info(`[mcp] listening on http://127.0.0.1:${port}/mcp`);
   });
+  mcpServer = server;
 
   server.on('error', err => {
-    serverStarted = false;
+    mcpServer = null;
     logger.error('[mcp] server error', err);
   });
-
-  process.on('exit', () => {
-    server.close();
-  });
 }
+
+export const stopMcpServer = async () => {
+  const server = mcpServer;
+  if (!server) {
+    return;
+  }
+
+  mcpServer = null;
+  await new Promise<void>((resolve, reject) => {
+    server.close(err => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve();
+    });
+  });
+  logger.info('[mcp] stopped');
+};
+
+export const getMcpServerEnabled = async () => {
+  return Boolean((await readConfig()).enabled);
+};
+
+export const setMcpServerEnabled = async (enabled: boolean) => {
+  await writeConfig({ enabled });
+  if (enabled) {
+    startMcpServer();
+  } else {
+    await stopMcpServer();
+  }
+  return getMcpServerStatus();
+};
+
+export const getMcpServerStatus = async () => {
+  const enabled = await getMcpServerEnabled();
+  return {
+    enabled,
+    running: Boolean(mcpServer),
+    url: `http://127.0.0.1:${Number(
+      process.env.AFFINE_MCP_PORT || DEFAULT_PORT
+    )}/mcp`,
+  };
+};
+
+export const startMcpServerFromPreference = async () => {
+  if (await getMcpServerEnabled()) {
+    startMcpServer();
+  }
+};
+
+process.once('exit', () => {
+  mcpServer?.close();
+});

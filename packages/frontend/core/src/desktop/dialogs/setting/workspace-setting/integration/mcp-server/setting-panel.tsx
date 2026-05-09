@@ -1,8 +1,15 @@
-import { Button, ErrorMessage, notify, Skeleton } from '@affine/component';
+import {
+  Button,
+  ErrorMessage,
+  notify,
+  Skeleton,
+  Switch,
+} from '@affine/component';
 import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
 import { AccessTokenService, ServerService } from '@affine/core/modules/cloud';
 import type { AccessToken } from '@affine/core/modules/cloud/stores/access-token';
 import { WorkspaceService } from '@affine/core/modules/workspace';
+import { apis } from '@affine/electron-api';
 import { UserFriendlyError } from '@affine/error';
 import { useI18n } from '@affine/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
@@ -38,6 +45,12 @@ const McpServerSetting = () => {
   const isRevalidating = useLiveData(accessTokenService.isRevalidating$);
   const error = useLiveData(accessTokenService.error$);
   const [mutating, setMutating] = useState(false);
+  const [mcpStatus, setMcpStatus] = useState<{
+    enabled: boolean;
+    running: boolean;
+    url: string;
+  } | null>(null);
+  const [mcpToggling, setMcpToggling] = useState(false);
   const [revealedAccessToken, setRevealedAccessToken] =
     useState<AccessToken | null>(null);
   const t = useI18n();
@@ -54,12 +67,13 @@ const McpServerSetting = () => {
 
   const code = useMemo(() => {
     if (isDesktopLocalMcp) {
+      const url = mcpStatus?.url ?? 'http://127.0.0.1:30115/mcp';
       return JSON.stringify(
         {
           mcpServers: {
             affine_desktop: {
               type: 'streamable-http',
-              url: 'http://127.0.0.1:30115/mcp',
+              url,
               note: `Read and edit local AFFiNE docs from workspace "${workspaceName}"`,
             },
           },
@@ -90,24 +104,62 @@ const McpServerSetting = () => {
   }, [
     displayedToken,
     isDesktopLocalMcp,
+    mcpStatus?.url,
     workspaceName,
     workspaceService,
     serverService,
   ]);
 
   const copyJsonDisabled =
-    !code || mutating || (!isDesktopLocalMcp && isRedactedDisplay);
+    !code ||
+    mutating ||
+    (isDesktopLocalMcp && !mcpStatus?.enabled) ||
+    (!isDesktopLocalMcp && isRedactedDisplay);
   const copyJsonTooltip =
     !isDesktopLocalMcp && isRedactedDisplay
       ? t['com.affine.integration.mcp-server.copy-json.disabled-hint']()
       : undefined;
 
-  const showLoading = accessTokens === null && isRevalidating;
-  const showError = accessTokens === null && error !== null;
+  const showLoading =
+    !isDesktopLocalMcp && accessTokens === null && isRevalidating;
+  const showError =
+    !isDesktopLocalMcp && accessTokens === null && error !== null;
 
   useEffect(() => {
-    accessTokenService.revalidate();
-  }, [accessTokenService]);
+    if (!isDesktopLocalMcp) {
+      accessTokenService.revalidate();
+    }
+  }, [accessTokenService, isDesktopLocalMcp]);
+
+  useEffect(() => {
+    if (!isDesktopLocalMcp) {
+      return;
+    }
+    apis?.mcp
+      .getStatus()
+      .then(setMcpStatus)
+      .catch(err => {
+        notify.error({
+          error: UserFriendlyError.fromAny(err),
+        });
+      });
+  }, [isDesktopLocalMcp]);
+
+  const handleToggleLocalMcp = useAsyncCallback(async (enabled: boolean) => {
+    setMcpToggling(true);
+    try {
+      const status = await apis?.mcp.setEnabled(enabled);
+      if (status) {
+        setMcpStatus(status);
+      }
+    } catch (err) {
+      notify.error({
+        error: UserFriendlyError.fromAny(err),
+      });
+    } finally {
+      setMcpToggling(false);
+    }
+  }, []);
 
   const handleGenerateAccessToken = useAsyncCallback(async () => {
     setMutating(true);
@@ -190,6 +242,24 @@ const McpServerSetting = () => {
           <p className={styles.sectionDescription}>
             This access token is used for the MCP service, please keep this
             information secure. Deleting it will invalidate the access token.
+          </p>
+        </div>
+      ) : null}
+
+      {isDesktopLocalMcp ? (
+        <div className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <div className={styles.sectionTitle}>Local MCP Server</div>
+            <Switch
+              checked={Boolean(mcpStatus?.enabled)}
+              disabled={!mcpStatus || mcpToggling}
+              onChange={handleToggleLocalMcp}
+            />
+          </div>
+          <p className={styles.sectionDescription}>
+            {mcpStatus?.running
+              ? `Running at ${mcpStatus.url}`
+              : 'Stopped. Turn this on before connecting an MCP client.'}
           </p>
         </div>
       ) : null}
