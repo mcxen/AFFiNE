@@ -41,6 +41,7 @@ const McpServerSetting = () => {
   const [revealedAccessToken, setRevealedAccessToken] =
     useState<AccessToken | null>(null);
   const t = useI18n();
+  const isDesktopLocalMcp = BUILD_CONFIG.isElectron;
 
   const mcpAccessToken = useMemo(() => {
     return accessTokens?.find(token => token.name === 'mcp');
@@ -52,6 +53,22 @@ const McpServerSetting = () => {
   const isRedactedDisplay = hasMcpToken && !hasCopyableToken;
 
   const code = useMemo(() => {
+    if (isDesktopLocalMcp) {
+      return JSON.stringify(
+        {
+          mcpServers: {
+            affine_desktop: {
+              type: 'streamable-http',
+              url: 'http://127.0.0.1:30115/mcp',
+              note: `Read and edit local AFFiNE docs from workspace "${workspaceName}"`,
+            },
+          },
+        },
+        null,
+        2
+      );
+    }
+
     return displayedToken
       ? JSON.stringify(
           {
@@ -70,12 +87,20 @@ const McpServerSetting = () => {
           2
         )
       : null;
-  }, [displayedToken, workspaceName, workspaceService, serverService]);
+  }, [
+    displayedToken,
+    isDesktopLocalMcp,
+    workspaceName,
+    workspaceService,
+    serverService,
+  ]);
 
-  const copyJsonDisabled = !code || mutating || isRedactedDisplay;
-  const copyJsonTooltip = isRedactedDisplay
-    ? t['com.affine.integration.mcp-server.copy-json.disabled-hint']()
-    : undefined;
+  const copyJsonDisabled =
+    !code || mutating || (!isDesktopLocalMcp && isRedactedDisplay);
+  const copyJsonTooltip =
+    !isDesktopLocalMcp && isRedactedDisplay
+      ? t['com.affine.integration.mcp-server.copy-json.disabled-hint']()
+      : undefined;
 
   const showLoading = accessTokens === null && isRevalidating;
   const showError = accessTokens === null && error !== null;
@@ -140,32 +165,34 @@ const McpServerSetting = () => {
     <div>
       <McpServerSettingHeader />
 
-      <div className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <div className={styles.sectionTitle}>Personal access token</div>
-          {!hasMcpToken ? (
-            <Button
-              variant="primary"
-              onClick={handleGenerateAccessToken}
-              disabled={mutating}
-            >
-              Create New
-            </Button>
-          ) : (
-            <Button
-              variant="error"
-              onClick={handleRevokeAccessToken}
-              disabled={mutating}
-            >
-              Delete
-            </Button>
-          )}
+      {!isDesktopLocalMcp ? (
+        <div className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <div className={styles.sectionTitle}>Personal access token</div>
+            {!hasMcpToken ? (
+              <Button
+                variant="primary"
+                onClick={handleGenerateAccessToken}
+                disabled={mutating}
+              >
+                Create New
+              </Button>
+            ) : (
+              <Button
+                variant="error"
+                onClick={handleRevokeAccessToken}
+                disabled={mutating}
+              >
+                Delete
+              </Button>
+            )}
+          </div>
+          <p className={styles.sectionDescription}>
+            This access token is used for the MCP service, please keep this
+            information secure. Deleting it will invalidate the access token.
+          </p>
         </div>
-        <p className={styles.sectionDescription}>
-          This access token is used for the MCP service, please keep this
-          information secure. Deleting it will invalidate the access token.
-        </p>
-      </div>
+      ) : null}
 
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
@@ -193,7 +220,7 @@ const McpServerSetting = () => {
             className={styles.sectionDescription}
             style={{ textAlign: 'center' }}
           >
-            No access token found, please generate one first.
+            No MCP server config available.
           </p>
         )}
       </div>
@@ -215,14 +242,10 @@ const McpServerSetting = () => {
 
         <div className={styles.section}>
           <div className={styles.sectionHeader}>
-            <div className={styles.sectionTitle}>semantic_search</div>
+            <div className={styles.sectionTitle}>list_documents</div>
           </div>
           <div className={styles.sectionDescription}>
-            Retrieve conceptually related passages by performing vector-based
-            semantic similarity search across embedded documents; use this tool
-            only when exact keyword search fails or the user explicitly needs
-            meaning-level matches (e.g., paraphrases, synonyms, broader
-            concepts, recent documents).
+            List documents in a local or cloud workspace.
           </div>
         </div>
 
@@ -264,6 +287,15 @@ const McpServerSetting = () => {
           </div>
           <div className={styles.sectionDescription}>
             Update document metadata, including the document title.
+          </div>
+        </div>
+
+        <div className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <div className={styles.sectionTitle}>delete_document</div>
+          </div>
+          <div className={styles.sectionDescription}>
+            Delete an existing document from the workspace.
           </div>
         </div>
       </div>

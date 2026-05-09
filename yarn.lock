@@ -548,6 +548,7 @@ __metadata:
     "@affine/i18n": "workspace:*"
     "@affine/native": "workspace:*"
     "@affine/nbstore": "workspace:*"
+    "@affine/server-native": "workspace:*"
     "@electron-forge/cli": "npm:^7.11.1"
     "@electron-forge/core": "npm:^7.11.1"
     "@electron-forge/maker-deb": "npm:^7.11.1"
