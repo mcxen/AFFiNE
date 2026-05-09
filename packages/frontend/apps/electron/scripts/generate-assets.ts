@@ -5,6 +5,25 @@ import { fileURLToPath } from 'node:url';
 
 import fs from 'fs-extra';
 
+function runOrThrow(command: string, args: string[]) {
+  const result = spawnSync(command, args, {
+    stdio: 'inherit',
+    env: process.env,
+    cwd,
+    shell: true,
+  });
+
+  if (result.status !== 0) {
+    throw new Error(
+      `${command} ${args.join(' ')} failed with exit code ${result.status ?? 'unknown'}`
+    );
+  }
+
+  if (result.error) {
+    throw result.error;
+  }
+}
+
 const require = createRequire(import.meta.url);
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -45,19 +64,8 @@ const cwd = repoRootDir;
 
 // step 1: build web dist
 if (!process.env.SKIP_WEB_BUILD) {
-  spawnSync('yarn', ['affine', '@affine/electron-renderer', 'build'], {
-    stdio: 'inherit',
-    env: process.env,
-    cwd,
-    shell: true,
-  });
-
-  spawnSync('yarn', ['affine', '@affine/electron', 'build'], {
-    stdio: 'inherit',
-    env: process.env,
-    cwd,
-    shell: true,
-  });
+  runOrThrow('yarn', ['affine', '@affine/electron-renderer', 'build']);
+  runOrThrow('yarn', ['affine', '@affine/electron', 'build']);
 
   await fs.move(affineWebOutDir, publicAffineOutDir, { overwrite: true });
 }

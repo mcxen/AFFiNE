@@ -1,6 +1,6 @@
 import { cssVar } from '@toeverything/theme';
 import { cssVarV2 } from '@toeverything/theme/v2';
-import { style } from '@vanilla-extract/css';
+import { globalStyle, style } from '@vanilla-extract/css';
 
 export const localHeader = style({
   width: '100%',
@@ -120,40 +120,45 @@ export const markdownContent = style({
   flexDirection: 'column',
   gap: 8,
   whiteSpace: 'normal',
-  selectors: {
-    '& p': {
-      margin: 0,
-      whiteSpace: 'pre-wrap',
-    },
-    '& ul': {
-      margin: 0,
-      paddingLeft: 20,
-    },
-    '& li': {
-      margin: '2px 0',
-    },
-    '& pre': {
-      maxWidth: '100%',
-      overflowX: 'auto',
-      margin: 0,
-      borderRadius: 6,
-      padding: '8px 10px',
-      background: cssVarV2('layer/background/tertiary'),
-    },
-    '& code': {
-      borderRadius: 4,
-      padding: '1px 4px',
-      fontFamily: 'monospace',
-      background: cssVarV2('layer/background/tertiary'),
-    },
-    '& pre code': {
-      padding: 0,
-      background: 'transparent',
-    },
-    '& a': {
-      color: cssVarV2('button/primary'),
-    },
-  },
+});
+
+globalStyle(`${markdownContent} p`, {
+  margin: 0,
+  whiteSpace: 'pre-wrap',
+});
+
+globalStyle(`${markdownContent} ul`, {
+  margin: 0,
+  paddingLeft: 20,
+});
+
+globalStyle(`${markdownContent} li`, {
+  margin: '2px 0',
+});
+
+globalStyle(`${markdownContent} pre`, {
+  maxWidth: '100%',
+  overflowX: 'auto',
+  margin: 0,
+  borderRadius: 6,
+  padding: '8px 10px',
+  background: cssVarV2('layer/background/tertiary'),
+});
+
+globalStyle(`${markdownContent} code`, {
+  borderRadius: 4,
+  padding: '1px 4px',
+  fontFamily: 'monospace',
+  background: cssVarV2('layer/background/tertiary'),
+});
+
+globalStyle(`${markdownContent} pre code`, {
+  padding: 0,
+  background: 'transparent',
+});
+
+globalStyle(`${markdownContent} a`, {
+  color: cssVarV2('button/primary'),
 });
 
 export const markdownHeading = style({
