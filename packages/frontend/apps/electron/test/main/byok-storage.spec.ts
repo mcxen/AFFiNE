@@ -5,6 +5,17 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 const tmpDir = path.join(__dirname, 'tmp-byok-storage');
 let disposeWorkspaceByokStorage: (() => void) | undefined;
+const generateTextMock = vi.hoisted(() => vi.fn());
+const providerModelMock = vi.hoisted(() => vi.fn());
+const createOpenAICompatibleMock = vi.hoisted(() => vi.fn());
+
+vi.mock('ai', () => ({
+  generateText: generateTextMock,
+}));
+
+vi.mock('@ai-sdk/openai-compatible', () => ({
+  createOpenAICompatible: createOpenAICompatibleMock,
+}));
 
 vi.mock('electron', () => ({
   app: {
@@ -20,6 +31,12 @@ vi.mock('electron', () => ({
 
 beforeEach(async () => {
   vi.resetModules();
+  generateTextMock.mockReset();
+  providerModelMock.mockReset();
+  createOpenAICompatibleMock.mockReset();
+  generateTextMock.mockResolvedValue({ text: 'ok' });
+  providerModelMock.mockImplementation((modelId: string) => ({ modelId }));
+  createOpenAICompatibleMock.mockReturnValue(providerModelMock);
   disposeWorkspaceByokStorage = undefined;
   await fs.remove(tmpDir);
 });
@@ -155,12 +172,6 @@ describe('byok storage handlers', () => {
       await import('@affine/electron/main/byok-storage/handlers');
     disposeWorkspaceByokStorage = dispose;
     const ipcEvent = undefined;
-    const fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      text: async () => '',
-    });
-    vi.stubGlobal('fetch', fetch);
 
     await byokStorageHandlers.upsertWorkspaceKey(ipcEvent, 'workspace-1', {
       id: 'local-openai',
@@ -181,13 +192,18 @@ describe('byok storage handlers', () => {
       keyId: 'local-openai',
       keyName: 'OpenAI',
     });
-    expect(fetch).toHaveBeenCalledWith(
-      'https://api.example.com/v1/chat/completions',
+    expect(createOpenAICompatibleMock).toHaveBeenCalledWith({
+      name: 'affine-local-byok',
+      apiKey: 'sk-openai',
+      baseURL: 'https://api.example.com/v1',
+    });
+    expect(providerModelMock).toHaveBeenCalledWith('deepseek-v4-pro');
+    expect(generateTextMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        method: 'POST',
-        headers: expect.objectContaining({
-          Authorization: 'Bearer sk-openai',
-        }),
+        model: { modelId: 'deepseek-v4-pro' },
+        prompt: 'ping',
+        maxOutputTokens: 1,
+        maxRetries: 0,
       })
     );
     expect(
@@ -206,13 +222,8 @@ describe('byok storage handlers', () => {
       await import('@affine/electron/main/byok-storage/handlers');
     disposeWorkspaceByokStorage = dispose;
     const ipcEvent = undefined;
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: false,
-        status: 404,
-        text: async () => '{"error":"model not found"}',
-      })
+    generateTextMock.mockRejectedValueOnce(
+      new Error('HTTP 404 {"error":"model not found"}')
     );
 
     await byokStorageHandlers.upsertWorkspaceKey(ipcEvent, 'workspace-1', {
@@ -232,6 +243,52 @@ describe('byok storage handlers', () => {
       ok: false,
       message: expect.stringContaining('HTTP 404'),
     });
+  });
+
+  test('uses AI SDK for local OpenAI-compatible chat completions', async () => {
+    generateTextMock.mockResolvedValueOnce({ text: 'local answer' });
+    const { byokStorageHandlers, disposeWorkspaceByokStorage: dispose } =
+      await import('@affine/electron/main/byok-storage/handlers');
+    disposeWorkspaceByokStorage = dispose;
+    const ipcEvent = undefined;
+
+    await byokStorageHandlers.upsertWorkspaceKey(ipcEvent, 'workspace-1', {
+      id: 'local-openai',
+      provider: 'openai',
+      name: 'OpenAI',
+      apiKey: 'sk-openai',
+      endpoint: 'https://api.example.com/v1/',
+    });
+
+    await expect(
+      byokStorageHandlers.chatCompletions(ipcEvent, 'workspace-1', {
+        modelId: 'deepseek-v4-pro',
+        content: 'Summarize this',
+        contexts: {
+          docs: [{ docTitle: 'Doc', docContent: 'Doc body' }],
+          selectedMarkdown: 'Selected text',
+        },
+      })
+    ).resolves.toBe('local answer');
+
+    expect(createOpenAICompatibleMock).toHaveBeenCalledWith({
+      name: 'affine-local-byok',
+      apiKey: 'sk-openai',
+      baseURL: 'https://api.example.com/v1',
+    });
+    expect(generateTextMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: { modelId: 'deepseek-v4-pro' },
+        system: expect.stringContaining('AFFiNE AI'),
+        prompt: expect.stringContaining('<document title="Doc">'),
+        maxRetries: 0,
+      })
+    );
+    expect(generateTextMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining('<selection>'),
+      })
+    );
   });
 
   test('skips local chat probe when no local OpenAI key exists', async () => {

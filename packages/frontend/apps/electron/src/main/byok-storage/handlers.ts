@@ -1,5 +1,7 @@
 import path from 'node:path';
 
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import { generateText } from 'ai';
 import { app, safeStorage } from 'electron';
 
 import { logger } from '../logger';
@@ -112,38 +114,14 @@ async function probeOpenAIChatModel(key: WorkspaceByokKey, modelId: string) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const endpoint = normalizeOpenAIEndpoint(key.endpoint);
-    const response = await fetch(`${endpoint}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${key.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: modelId,
-        messages: [{ role: 'user', content: 'ping' }],
-        max_tokens: 1,
-        stream: false,
-      }),
-      signal: controller.signal,
+    await generateText({
+      model: createOpenAICompatibleProvider(key)(modelId),
+      prompt: 'ping',
+      maxOutputTokens: 1,
+      maxRetries: 0,
+      abortSignal: controller.signal,
     });
-
-    if (response.ok) {
-      return { ok: true as const, message: null };
-    }
-
-    let detail = '';
-    try {
-      const body = (await response.text()).slice(0, 300);
-      detail = body ? ` ${body}` : '';
-    } catch {
-      // Ignore response body parsing failures. HTTP status is enough context.
-    }
-
-    return {
-      ok: false as const,
-      message: `Provider chat probe failed with HTTP ${response.status}.${detail}`,
-    };
+    return { ok: true as const, message: null };
   } catch (error) {
     return {
       ok: false as const,
@@ -161,6 +139,14 @@ function localChatError(message: string) {
   return new Error(`Local AI provider request failed: ${message}`);
 }
 
+function createOpenAICompatibleProvider(key: WorkspaceByokKey) {
+  return createOpenAICompatible({
+    name: 'affine-local-byok',
+    apiKey: key.apiKey,
+    baseURL: normalizeOpenAIEndpoint(key.endpoint),
+  });
+}
+
 async function requestOpenAICompatibleChat({
   key,
   modelId,
@@ -172,44 +158,14 @@ async function requestOpenAICompatibleChat({
   content: string;
   signal?: AbortSignal;
 }) {
-  const endpoint = normalizeOpenAIEndpoint(key.endpoint);
-  const response = await fetch(`${endpoint}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${key.apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: modelId,
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are AFFiNE AI. Answer clearly and helpfully. Use markdown when it improves readability.',
-        },
-        { role: 'user', content },
-      ],
-      stream: false,
-    }),
-    signal,
+  const { text } = await generateText({
+    model: createOpenAICompatibleProvider(key)(modelId),
+    system:
+      'You are AFFiNE AI. Answer clearly and helpfully. Use markdown when it improves readability.',
+    prompt: content,
+    maxRetries: 0,
+    abortSignal: signal,
   });
-
-  if (!response.ok) {
-    let detail = '';
-    try {
-      detail = (await response.text()).slice(0, 500);
-    } catch {
-      // Ignore body parse failures and report the status below.
-    }
-    throw localChatError(
-      `HTTP ${response.status}${detail ? ` ${detail}` : ''}`
-    );
-  }
-
-  const body = (await response.json()) as {
-    choices?: { message?: { content?: string | null } }[];
-  };
-  const text = body.choices?.[0]?.message?.content;
   if (!text) {
     throw localChatError('empty provider response');
   }
