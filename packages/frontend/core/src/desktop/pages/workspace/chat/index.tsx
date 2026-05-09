@@ -4,8 +4,13 @@ import {
   AIProvider,
   type AISendParams,
 } from '@affine/core/blocksuite/ai/provider';
-import { extractSelectedContent } from '@affine/core/blocksuite/ai/utils/extract';
+import {
+  extractMarkdownFromDoc,
+  extractSelectedContent,
+} from '@affine/core/blocksuite/ai/utils/extract';
+import { useAIChatConfig } from '@affine/core/components/hooks/affine/use-ai-chat-config';
 import { AIModelService } from '@affine/core/modules/ai-button/services/models';
+import { DocsService } from '@affine/core/modules/doc';
 import {
   ViewBody,
   ViewHeader,
@@ -15,8 +20,15 @@ import {
 import { WorkspaceService } from '@affine/core/modules/workspace';
 import { apis } from '@affine/electron-api';
 import { useI18n } from '@affine/i18n';
-import { useService } from '@toeverything/infra';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLiveData, useService } from '@toeverything/infra';
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import * as styles from './index.css';
 
@@ -30,6 +42,12 @@ type LocalChatContext = Pick<
   Partial<ChatContextValue>,
   'quote' | 'markdown' | 'combinedElementsMarkdown'
 >;
+
+type SelectedDocContext = {
+  docId: string;
+  title: string;
+  markdown: string;
+};
 
 function createMessageId() {
   return crypto.randomUUID();
@@ -60,13 +78,102 @@ function localByokStorage() {
   return BUILD_CONFIG.isElectron ? apis?.byokStorage : undefined;
 }
 
+function renderInlineMarkdown(text: string): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  const pattern = /(`[^`]+`|\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\))/g;
+  let lastIndex = 0;
+
+  for (const match of text.matchAll(pattern)) {
+    if (match.index === undefined) continue;
+    if (match.index > lastIndex) {
+      nodes.push(text.slice(lastIndex, match.index));
+    }
+
+    const token = match[0];
+    if (token.startsWith('`')) {
+      nodes.push(<code key={match.index}>{token.slice(1, -1)}</code>);
+    } else if (token.startsWith('**')) {
+      nodes.push(<strong key={match.index}>{token.slice(2, -2)}</strong>);
+    } else {
+      const link = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+      nodes.push(
+        link ? (
+          <a key={match.index} href={link[2]} rel="noreferrer" target="_blank">
+            {link[1]}
+          </a>
+        ) : (
+          token
+        )
+      );
+    }
+    lastIndex = match.index + token.length;
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push(text.slice(lastIndex));
+  }
+  return nodes;
+}
+
+function MarkdownContent({ content }: { content: string }) {
+  const blocks = content.split(/\n{2,}/);
+  return (
+    <div className={styles.markdownContent}>
+      {blocks.map((block, index) => {
+        const trimmed = block.trim();
+        if (!trimmed) return null;
+
+        if (trimmed.startsWith('```')) {
+          return (
+            <pre key={index}>
+              <code>
+                {trimmed.replace(/^```[^\n]*\n?/, '').replace(/```$/, '')}
+              </code>
+            </pre>
+          );
+        }
+
+        if (/^#{1,6}\s/.test(trimmed)) {
+          return (
+            <div key={index} className={styles.markdownHeading}>
+              {renderInlineMarkdown(trimmed.replace(/^#{1,6}\s/, ''))}
+            </div>
+          );
+        }
+
+        const lines = trimmed.split('\n');
+        const listItems = lines
+          .map(line => line.match(/^\s*[-*]\s+(.+)$/)?.[1])
+          .filter((item): item is string => !!item);
+        if (listItems.length && listItems.length === lines.length) {
+          return (
+            <ul key={index}>
+              {listItems.map((item, itemIndex) => (
+                <li key={itemIndex}>{renderInlineMarkdown(item)}</li>
+              ))}
+            </ul>
+          );
+        }
+
+        return <p key={index}>{renderInlineMarkdown(trimmed)}</p>;
+      })}
+    </div>
+  );
+}
+
 export const Component = () => {
   const t = useI18n();
-  const workspaceId = useService(WorkspaceService).workspace.id;
+  const workspaceService = useService(WorkspaceService);
+  const workspaceId = workspaceService.workspace.id;
+  const docsService = useService(DocsService);
   const aiModelService = useService(AIModelService);
+  const { docDisplayConfig } = useAIChatConfig();
+  const docIds = useLiveData(docsService.list.nonTrashDocsIds$);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<LocalChatMessage[]>([]);
   const [context, setContext] = useState<LocalChatContext | null>(null);
+  const [selectedDocs, setSelectedDocs] = useState<SelectedDocContext[]>([]);
+  const [isAddingDoc, setIsAddingDoc] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [hasProvider, setHasProvider] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -117,6 +224,53 @@ export const Component = () => {
     return `Local BYOK: ${modelId}`;
   }, [hasProvider, modelId]);
 
+  const docOptions = useMemo(
+    () =>
+      docIds
+        .filter(docId => !selectedDocs.some(doc => doc.docId === docId))
+        .map(docId => ({
+          docId,
+          title: docDisplayConfig.getTitle(docId),
+        })),
+    [docDisplayConfig, docIds, selectedDocs]
+  );
+
+  const addDocumentContext = useCallback(
+    async (docId: string) => {
+      if (!docId) return;
+      setIsAddingDoc(true);
+      setError(null);
+      try {
+        const doc = workspaceService.workspace.docCollection.getDoc(docId);
+        const store = doc?.getStore();
+        if (!store) {
+          throw new Error('Document not found.');
+        }
+        if (!store.ready) {
+          store.load();
+        }
+        const markdown = await extractMarkdownFromDoc(store);
+        setSelectedDocs(current => [
+          ...current,
+          {
+            docId,
+            title: docDisplayConfig.getTitle(docId),
+            markdown,
+          },
+        ]);
+      } catch (error) {
+        setError(
+          error instanceof Error
+            ? error.message
+            : 'Failed to add document context.'
+        );
+      } finally {
+        setIsAddingDoc(false);
+      }
+    },
+    [docDisplayConfig, workspaceService]
+  );
+
   const sendInput = useCallback(
     async (rawInput: string, nextContext = context) => {
       const content = rawInput.trim();
@@ -157,11 +311,16 @@ export const Component = () => {
         const answer = await storage.chatCompletions(workspaceId, {
           modelId,
           content: buildPrompt(messages, content),
-          contexts: selectedMarkdown
-            ? {
-                selectedMarkdown,
-              }
-            : undefined,
+          contexts:
+            selectedMarkdown || selectedDocs.length
+              ? {
+                  selectedMarkdown,
+                  docs: selectedDocs.map(doc => ({
+                    docTitle: doc.title,
+                    docContent: doc.markdown,
+                  })),
+                }
+              : undefined,
         });
         setMessages(current =>
           current.map(message =>
@@ -186,7 +345,7 @@ export const Component = () => {
         inputRef.current?.focus();
       }
     },
-    [context, isSending, messages, modelId, workspaceId]
+    [context, isSending, messages, modelId, selectedDocs, workspaceId]
   );
 
   const send = useCallback(async () => {
@@ -297,7 +456,13 @@ export const Component = () => {
                     {message.role === 'user' ? 'You' : 'AFFiNE AI'}
                   </div>
                   <div className={styles.messageContent}>
-                    {message.content || (isSending ? 'Thinking...' : '')}
+                    {message.content ? (
+                      <MarkdownContent content={message.content} />
+                    ) : isSending ? (
+                      'Thinking...'
+                    ) : (
+                      ''
+                    )}
                   </div>
                 </div>
               ))
@@ -314,6 +479,40 @@ export const Component = () => {
           {error ? <div className={styles.error}>{error}</div> : null}
 
           <div className={styles.inputPanel}>
+            <div className={styles.docContextRow}>
+              <select
+                className={styles.docSelect}
+                value=""
+                disabled={isAddingDoc || !docOptions.length}
+                onChange={event => {
+                  addDocumentContext(event.target.value).catch(console.error);
+                }}
+              >
+                <option value="">
+                  {isAddingDoc ? 'Adding document...' : 'Add document context'}
+                </option>
+                {docOptions.map(doc => (
+                  <option key={doc.docId} value={doc.docId}>
+                    {doc.title}
+                  </option>
+                ))}
+              </select>
+              {selectedDocs.map(doc => (
+                <button
+                  key={doc.docId}
+                  className={styles.docChip}
+                  type="button"
+                  onClick={() =>
+                    setSelectedDocs(current =>
+                      current.filter(item => item.docId !== doc.docId)
+                    )
+                  }
+                >
+                  {doc.title}
+                  <span>×</span>
+                </button>
+              ))}
+            </div>
             {contextMarkdown ? (
               <div className={styles.contextPill}>
                 <span className={styles.contextLabel}>Selected context</span>

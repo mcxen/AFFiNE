@@ -149,19 +149,23 @@ async function localTextToText({
   }
 
   if (!modelId?.trim()) {
-    return undefined;
+    throw new Error('Set a custom model id in Settings > AI first.');
   }
 
-  return storage.chatCompletions(workspaceId, {
-    modelId,
-    content,
-    contexts: {
-      docs: params?.docs,
-      files: params?.files,
-      selectedMarkdown: params?.selectedMarkdown,
-      html: params?.html,
-    },
-  });
+  try {
+    return await storage.chatCompletions(workspaceId, {
+      modelId,
+      content,
+      contexts: {
+        docs: params?.docs,
+        files: params?.files,
+        selectedMarkdown: params?.selectedMarkdown,
+        html: params?.html,
+      },
+    });
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : String(error));
+  }
 }
 
 export type TextToTextOptions = {

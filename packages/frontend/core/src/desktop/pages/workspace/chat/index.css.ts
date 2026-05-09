@@ -106,7 +106,6 @@ export const messageRole = style({
 
 export const messageContent = style({
   maxWidth: '100%',
-  whiteSpace: 'pre-wrap',
   overflowWrap: 'anywhere',
   borderRadius: 8,
   padding: '10px 12px',
@@ -114,6 +113,53 @@ export const messageContent = style({
   lineHeight: '22px',
   color: cssVarV2('text/primary'),
   background: cssVarV2('layer/background/secondary'),
+});
+
+export const markdownContent = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 8,
+  whiteSpace: 'normal',
+  selectors: {
+    '& p': {
+      margin: 0,
+      whiteSpace: 'pre-wrap',
+    },
+    '& ul': {
+      margin: 0,
+      paddingLeft: 20,
+    },
+    '& li': {
+      margin: '2px 0',
+    },
+    '& pre': {
+      maxWidth: '100%',
+      overflowX: 'auto',
+      margin: 0,
+      borderRadius: 6,
+      padding: '8px 10px',
+      background: cssVarV2('layer/background/tertiary'),
+    },
+    '& code': {
+      borderRadius: 4,
+      padding: '1px 4px',
+      fontFamily: 'monospace',
+      background: cssVarV2('layer/background/tertiary'),
+    },
+    '& pre code': {
+      padding: 0,
+      background: 'transparent',
+    },
+    '& a': {
+      color: cssVarV2('button/primary'),
+    },
+  },
+});
+
+export const markdownHeading = style({
+  fontSize: 16,
+  fontWeight: 600,
+  lineHeight: '24px',
 });
 
 export const error = style({
@@ -135,6 +181,45 @@ export const inputPanel = style({
   background: cssVarV2('layer/background/primary'),
   boxShadow: cssVar('buttonShadow'),
   padding: 12,
+});
+
+export const docContextRow = style({
+  gridColumn: '1 / -1',
+  minWidth: 0,
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  flexWrap: 'wrap',
+});
+
+export const docSelect = style({
+  height: 28,
+  maxWidth: 220,
+  border: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
+  borderRadius: 6,
+  padding: '0 8px',
+  background: cssVarV2('layer/background/secondary'),
+  color: cssVarV2('text/primary'),
+  fontSize: 12,
+  outline: 'none',
+});
+
+export const docChip = style({
+  maxWidth: 220,
+  height: 28,
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  border: 'none',
+  borderRadius: 6,
+  padding: '0 8px',
+  background: cssVarV2('layer/background/secondary'),
+  color: cssVarV2('text/primary'),
+  fontSize: 12,
+  cursor: 'pointer',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
 });
 
 export const contextPill = style({
