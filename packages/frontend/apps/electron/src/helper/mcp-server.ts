@@ -6,14 +6,6 @@ import {
 } from 'node:http';
 import path from 'node:path';
 
-import {
-  addDocToRootDoc,
-  createDocWithMarkdown,
-  parseDocToMarkdown,
-  updateDocTitle,
-  updateDocWithMarkdown,
-  updateRootDocMetaTitle,
-} from '@affine/server-native';
 import { universalId as generateUniversalId } from '@affine/nbstore';
 import fs from 'fs-extra';
 import { nanoid } from 'nanoid';
@@ -65,6 +57,14 @@ const configFileName = 'mcp-server.json';
 
 type McpServerConfig = {
   enabled?: boolean;
+};
+
+let serverNativePromise: Promise<typeof import('@affine/server-native')> | null =
+  null;
+
+const loadServerNative = () => {
+  serverNativePromise ??= import('@affine/server-native');
+  return serverNativePromise;
 };
 
 const text = (value: unknown): ToolResult => ({
@@ -281,6 +281,7 @@ const buildTools = (): ToolDefinition[] => [
       if (!docBin) {
         return error(`Doc with id ${docId} not found.`);
       }
+      const { parseDocToMarkdown } = await loadServerNative();
       const result = parseDocToMarkdown(docBin, docId, false);
       return text(result.markdown);
     },
@@ -316,6 +317,7 @@ const buildTools = (): ToolDefinition[] => [
         if (!docBin) {
           continue;
         }
+        const { parseDocToMarkdown } = await loadServerNative();
         const markdown = parseDocToMarkdown(docBin, doc.docId, false).markdown;
         if (
           doc.title.toLocaleLowerCase().includes(query) ||
@@ -361,6 +363,8 @@ const buildTools = (): ToolDefinition[] => [
       if (!rootBin) {
         return error(`Workspace ${workspaceId} not found.`);
       }
+      const { addDocToRootDoc, createDocWithMarkdown } =
+        await loadServerNative();
 
       const docId = nanoid();
       await pool.pushUpdate(
@@ -401,6 +405,7 @@ const buildTools = (): ToolDefinition[] => [
       }
 
       const { pool, universalId } = await ensureWorkspaceConnected(workspaceId);
+      const { updateDocWithMarkdown } = await loadServerNative();
       await pool.pushUpdate(
         universalId,
         docId,
@@ -439,6 +444,8 @@ const buildTools = (): ToolDefinition[] => [
       }
 
       const { pool, universalId } = await ensureWorkspaceConnected(workspaceId);
+      const { updateRootDocMetaTitle, updateDocTitle } =
+        await loadServerNative();
       await pool.pushUpdate(
         universalId,
         workspaceId,
