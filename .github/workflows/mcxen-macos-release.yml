@@ -57,7 +57,18 @@ jobs:
         run: yarn affine @affine/electron generate-assets
 
       - name: Verify desktop web assets
-        run: test -f packages/frontend/apps/electron/resources/web-static/index.html
+        run: |
+          target_dir="packages/frontend/apps/electron/resources/web-static"
+          target_file="$target_dir/index.html"
+          fallback_dir="packages/frontend/apps/electron-renderer/dist"
+
+          if [ ! -f "$target_file" ] && [ -f "$fallback_dir/index.html" ]; then
+            rm -rf "$target_dir"
+            mkdir -p "$(dirname "$target_dir")"
+            mv "$fallback_dir" "$target_dir"
+          fi
+
+          test -f "$target_file"
 
       - name: Make macOS installer
         run: yarn affine @affine/electron make --platform=darwin --arch=arm64
