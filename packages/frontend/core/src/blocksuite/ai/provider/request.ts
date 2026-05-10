@@ -12,12 +12,15 @@ import { toTextStream } from './event-source';
 
 const TIMEOUT = 50000;
 
-function isElectronBuild() {
-  return typeof BUILD_CONFIG !== 'undefined' && BUILD_CONFIG.isElectron;
+function isLocalBuild() {
+  return (
+    typeof BUILD_CONFIG !== 'undefined' &&
+    (BUILD_CONFIG.isElectron || BUILD_CONFIG.isMobileEdition)
+  );
 }
 
 function byokStorageApi(): ClientHandler['byokStorage'] | undefined {
-  return isElectronBuild() ? apis?.byokStorage : undefined;
+  return isLocalBuild() ? apis?.byokStorage : undefined;
 }
 
 async function hasLocalChatProvider(workspaceId?: string) {

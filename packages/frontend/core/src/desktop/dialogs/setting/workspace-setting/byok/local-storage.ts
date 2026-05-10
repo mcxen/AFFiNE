@@ -6,7 +6,9 @@ import { capabilitiesFor } from './metadata';
 import type { ByokKey, LocalByokKeyInput, LocalByokPublicKey } from './types';
 
 function byokStorageApi() {
-  return BUILD_CONFIG.isElectron ? apis?.byokStorage : undefined;
+  return BUILD_CONFIG.isElectron || BUILD_CONFIG.isMobileEdition
+    ? apis?.byokStorage
+    : undefined;
 }
 
 export async function localByokStorageSupported() {

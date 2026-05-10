@@ -11,13 +11,10 @@ import type { Workspace } from '../modules/workspace';
 const minimumChromeVersion = 106;
 
 const shouldShowWarning = (() => {
-  if (BUILD_CONFIG.isElectron) {
-    // even though desktop has compatibility issues,
-    //  we don't want to show the warning
+  if (BUILD_CONFIG.isElectron || BUILD_CONFIG.isMobileEdition) {
+    // even though desktop or mobile has compatibility issues,
+    //  we don't want to show the warning (same as desktop client)
     return false;
-  }
-  if (BUILD_CONFIG.isMobileEdition) {
-    return true;
   }
   if (environment.isChrome && environment.chromeVersion) {
     return environment.chromeVersion < minimumChromeVersion;
@@ -75,6 +72,7 @@ export const TopTip = ({
 
   if (
     !BUILD_CONFIG.isElectron &&
+    !BUILD_CONFIG.isMobileEdition &&
     showLocalDemoTips &&
     workspace.flavour === 'local'
   ) {

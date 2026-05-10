@@ -29,12 +29,15 @@ function toAIUserInfo(account: AuthAccountInfo | null) {
   };
 }
 
-function isElectronBuild() {
-  return typeof BUILD_CONFIG !== 'undefined' && BUILD_CONFIG.isElectron;
+function isLocalBuild() {
+  return (
+    typeof BUILD_CONFIG !== 'undefined' &&
+    (BUILD_CONFIG.isElectron || BUILD_CONFIG.isMobileEdition)
+  );
 }
 
 async function hasLocalChatProvider(workspaceId?: string) {
-  const storage = isElectronBuild() ? apis?.byokStorage : undefined;
+  const storage = isLocalBuild() ? apis?.byokStorage : undefined;
   if (!workspaceId || !storage) {
     return false;
   }

@@ -75,7 +75,9 @@ function buildPrompt(messages: LocalChatMessage[], input: string) {
 }
 
 function localByokStorage() {
-  return BUILD_CONFIG.isElectron ? apis?.byokStorage : undefined;
+  return BUILD_CONFIG.isElectron || BUILD_CONFIG.isMobileEdition
+    ? apis?.byokStorage
+    : undefined;
 }
 
 function renderInlineMarkdown(text: string): ReactNode[] {
