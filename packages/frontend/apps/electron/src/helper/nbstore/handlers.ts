@@ -13,6 +13,35 @@ export function getDocStoragePool() {
   return POOL;
 }
 
+// Event emitter for external doc updates (e.g. from MCP server)
+type DocUpdateListener = (
+  universalId: string,
+  docId: string,
+  update: Uint8Array
+) => void;
+const externalUpdateListeners = new Set<DocUpdateListener>();
+
+export function onExternalDocUpdate(listener: DocUpdateListener) {
+  externalUpdateListeners.add(listener);
+  return () => {
+    externalUpdateListeners.delete(listener);
+  };
+}
+
+export function emitExternalDocUpdate(
+  universalId: string,
+  docId: string,
+  update: Uint8Array
+) {
+  for (const listener of externalUpdateListeners) {
+    try {
+      listener(universalId, docId, update);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
 export const nbstoreHandlers: NativeDBApis = {
   connect: async (universalId: string) => {
     const { peer, type, id } = parseUniversalId(universalId);

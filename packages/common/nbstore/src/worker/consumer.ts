@@ -349,6 +349,30 @@ export class StoreManagerConsumer {
     this.registerHandlers(consumer);
   }
 
+  /**
+   * Notify all active stores about an external doc update (e.g. from MCP server).
+   * This triggers the same event as if the doc was updated locally.
+   */
+  reportExternalUpdate(
+    _universalId: string,
+    docId: string,
+    update: Uint8Array
+  ) {
+    for (const { store } of this.storePool.values()) {
+      try {
+        const docStorage = store.docStorage;
+        if ('emitExternalUpdate' in docStorage) {
+          (docStorage as any).emitExternalUpdate(
+            { docId, bin: update, timestamp: new Date() },
+            'external:mcp'
+          );
+        }
+      } catch {
+        // store may not be connected yet
+      }
+    }
+  }
+
   private registerHandlers(consumer: OpConsumer<WorkerManagerOps>) {
     consumer.registerAll({
       open: ({ port, key, closeKey, options }) => {

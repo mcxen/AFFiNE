@@ -46,7 +46,7 @@ jobs:
         uses: ./.github/actions/setup-node
         with:
           electron-install: false
-          extra-flags: workspaces focus @affine/server @affine/server-native @types/affine__env
+          extra-flags: --immutable --inline-builds
 
       - name: Build server-native for ARM64
         uses: ./.github/actions/build-rust

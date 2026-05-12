@@ -311,6 +311,135 @@ const CustomFontFamilySettings = () => {
   );
 };
 
+type CodeFontOption =
+  | 'IBM Plex Mono'
+  | 'Space Mono'
+  | 'Source Code Pro'
+  | 'Custom';
+
+const codeFontOptions: { value: CodeFontOption; label: string }[] = [
+  { value: 'IBM Plex Mono', label: 'IBM Plex Mono' },
+  { value: 'Space Mono', label: 'Space Mono' },
+  { value: 'Source Code Pro', label: 'Source Code Pro' },
+  { value: 'Custom', label: 'Custom' },
+];
+
+const applyCodeFont = (font: string) => {
+  const fallback = 'Consolas, Menlo, Monaco, Courier, monospace';
+  document.documentElement.style.setProperty(
+    '--affine-font-code-family',
+    `"${font}", ${fallback}`
+  );
+};
+
+const CodeFontFamilySettings = () => {
+  const t = useI18n();
+  const { editorSettingService } = useServices({ EditorSettingService });
+  const settings = useLiveData(editorSettingService.editorSetting.settings$);
+
+  useEffect(() => {
+    const font =
+      settings.codeFontFamily === 'Custom'
+        ? settings.customCodeFontFamily || 'IBM Plex Mono'
+        : settings.codeFontFamily;
+    applyCodeFont(font);
+  }, [settings.codeFontFamily, settings.customCodeFontFamily]);
+
+  const onCodeFontChange = useCallback(
+    (value: CodeFontOption) => {
+      editorSettingService.editorSetting.set('codeFontFamily', value);
+    },
+    [editorSettingService.editorSetting]
+  );
+
+  const onCustomCodeFontChange = useCallback(
+    (font: string) => {
+      editorSettingService.editorSetting.set('customCodeFontFamily', font);
+    },
+    [editorSettingService.editorSetting]
+  );
+
+  const items = useMemo(
+    () =>
+      codeFontOptions
+        .filter(opt => opt.value !== 'Custom' || BUILD_CONFIG.isElectron)
+        .map(opt => ({
+          ...opt,
+          testId: `code-font-${opt.value}`,
+          style: { fontFamily: `"${opt.value}", monospace` },
+        })),
+    []
+  );
+
+  return (
+    <>
+      <SettingRow
+        name={
+          t['com.affine.settings.editorSettings.general.code-font.title']?.() ??
+          'Code block font'
+        }
+        desc={
+          t[
+            'com.affine.settings.editorSettings.general.code-font.description'
+          ]?.() ?? 'Font used in code blocks'
+        }
+      >
+        <Menu
+          contentOptions={menuContentOptions}
+          items={items.map(item => (
+            <MenuItem
+              key={item.value}
+              selected={item.value === settings.codeFontFamily}
+              onSelect={() => onCodeFontChange(item.value)}
+              data-testid={item.testId}
+            >
+              <span style={item.style}>{item.label}</span>
+            </MenuItem>
+          ))}
+        >
+          <MenuTrigger
+            className={styles.menuTrigger}
+            style={{ fontFamily: `"${settings.codeFontFamily}", monospace` }}
+          >
+            {settings.codeFontFamily}
+          </MenuTrigger>
+        </Menu>
+      </SettingRow>
+      {settings.codeFontFamily === 'Custom' && BUILD_CONFIG.isElectron ? (
+        <SettingRow
+          name={
+            t[
+              'com.affine.settings.editorSettings.general.code-font.custom.title'
+            ]?.() ?? 'Custom code font'
+          }
+          desc={
+            t[
+              'com.affine.settings.editorSettings.general.code-font.custom.description'
+            ]?.() ?? 'Select a monospace font from your system'
+          }
+        >
+          <Menu
+            items={<FontMenuItems onSelect={onCustomCodeFontChange} />}
+            contentOptions={{
+              align: 'end',
+              style: { width: '250px', height: '380px' },
+            }}
+          >
+            <MenuTrigger
+              className={styles.menuTrigger}
+              style={{
+                fontFamily: `"${settings.customCodeFontFamily}", monospace`,
+              }}
+            >
+              {settings.customCodeFontFamily || 'Select a font'}
+            </MenuTrigger>
+          </Menu>
+        </SettingRow>
+      ) : null}
+    </>
+  );
+};
+
 const FontSizeSettings = () => {
   const t = useI18n();
   const { editorSettingService } = useServices({ EditorSettingService });
@@ -660,14 +789,12 @@ export const General = () => {
       <AISettings />
       <FontFamilySettings />
       <CustomFontFamilySettings />
+      <CodeFontFamilySettings />
       <FontSizeSettings />
       <NewDocDefaultModeSettings />
       <NewDocDateTitleSettings />
       {BUILD_CONFIG.isElectron && <SpellCheckSettings />}
       {environment.isLinux && <MiddleClickPasteSettings />}
-      {/* // TODO(@akumatus): implement these settings
-        <DeFaultCodeBlockSettings />
-       */}
     </SettingWrapper>
   );
 };

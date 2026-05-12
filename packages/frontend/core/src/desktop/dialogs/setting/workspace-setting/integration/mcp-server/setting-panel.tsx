@@ -303,6 +303,16 @@ const McpServerSetting = () => {
 
         <div className={styles.section}>
           <div className={styles.sectionHeader}>
+            <div className={styles.sectionTitle}>get_workspace_info</div>
+          </div>
+          <div className={styles.sectionDescription}>
+            Get workspace metadata including name, document count, and avatar
+            key.
+          </div>
+        </div>
+
+        <div className={styles.section}>
+          <div className={styles.sectionHeader}>
             <div className={styles.sectionTitle}>read_document</div>
           </div>
           <div className={styles.sectionDescription}>
@@ -348,6 +358,26 @@ const McpServerSetting = () => {
           <div className={styles.sectionDescription}>
             Replace an existing document body with markdown content while
             preserving document history.
+          </div>
+        </div>
+
+        <div className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <div className={styles.sectionTitle}>append_to_document</div>
+          </div>
+          <div className={styles.sectionDescription}>
+            Append markdown content to the end of an existing document without
+            replacing existing content.
+          </div>
+        </div>
+
+        <div className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <div className={styles.sectionTitle}>get_document_outline</div>
+          </div>
+          <div className={styles.sectionDescription}>
+            Return the heading structure (outline) of a document as a list of
+            headings with levels.
           </div>
         </div>
 

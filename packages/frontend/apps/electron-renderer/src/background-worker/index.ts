@@ -1,6 +1,6 @@
 import '@affine/core/bootstrap/electron';
 
-import { apis } from '@affine/electron-api';
+import { apis, events } from '@affine/electron-api';
 import { broadcastChannelStorages } from '@affine/nbstore/broadcast-channel';
 import { cloudStorages } from '@affine/nbstore/cloud';
 import { bindNativeDBApis, sqliteStorages } from '@affine/nbstore/sqlite';
@@ -25,6 +25,13 @@ const storeManager = new StoreManagerConsumer([
   ...broadcastChannelStorages,
   ...cloudStorages,
 ]);
+
+// Listen for external doc updates (e.g. from MCP server) and notify local storages
+(events as any)?.nbstore?.onExternalDocUpdate?.(
+  (universalId: string, docId: string, update: Uint8Array) => {
+    (storeManager as any).reportExternalUpdate(universalId, docId, update);
+  }
+);
 
 window.addEventListener('message', ev => {
   if (ev.data.type === 'electron:worker-connect') {

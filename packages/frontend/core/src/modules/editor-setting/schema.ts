@@ -27,6 +27,10 @@ export const fontStyleOptions = [
 const AffineEditorSettingSchema = z.object({
   fontFamily: z.enum(['Sans', 'Serif', 'Mono', 'Custom']).default('Sans'),
   customFontFamily: z.string().default(''),
+  codeFontFamily: z
+    .enum(['IBM Plex Mono', 'Space Mono', 'Source Code Pro', 'Custom'])
+    .default('IBM Plex Mono'),
+  customCodeFontFamily: z.string().default(''),
   fontSize: z.number().min(12).max(24).default(16),
   newDocDefaultMode: z.enum(['edgeless', 'page', 'ask']).default('page'),
   autoTitleNewDocWithCurrentDate: z.boolean().default(false),

@@ -194,6 +194,11 @@ export abstract class DocStorageBase<Opts = {}> implements DocStorage {
     };
   }
 
+  /** Emit an update event from an external source (e.g. MCP server) */
+  emitExternalUpdate(update: DocRecord, origin?: string) {
+    this.event.emit('update', update, origin);
+  }
+
   async crawlDocData(_docId: string): Promise<CrawlResult | null> {
     return null;
   }

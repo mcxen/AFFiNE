@@ -18,7 +18,7 @@ import {
 } from 'yjs';
 
 import { logger } from './logger';
-import { getDocStoragePool } from './nbstore';
+import { emitExternalDocUpdate, getDocStoragePool } from './nbstore';
 import { listLocalWorkspaceIds } from './workspace';
 import { getAppDataPath, getSpaceDBPath } from './workspace/meta';
 
@@ -217,6 +217,17 @@ const ensureWorkspaceConnected = async (workspaceId: string) => {
   return { pool, universalId };
 };
 
+/** Push update and notify renderer about the change */
+const pushUpdateAndNotify = async (
+  pool: ReturnType<typeof getDocStoragePool>,
+  universalId: string,
+  docId: string,
+  update: Uint8Array
+) => {
+  await pool.pushUpdate(universalId, docId, update);
+  emitExternalDocUpdate(universalId, docId, update);
+};
+
 const getMergedDocUpdate = async (workspaceId: string, docId: string) => {
   const { pool, universalId } = await ensureWorkspaceConnected(workspaceId);
   const snapshot = await pool.getDocSnapshot(universalId, docId);
@@ -271,7 +282,7 @@ const listDocumentMetas = async (workspaceId: string) => {
 
 const pushRootUpdate = async (workspaceId: string, update: Uint8Array) => {
   const { pool, universalId } = await ensureWorkspaceConnected(workspaceId);
-  await pool.pushUpdate(universalId, workspaceId, update);
+  await pushUpdateAndNotify(pool, universalId, workspaceId, update);
 };
 
 const buildTools = (): ToolDefinition[] => [
@@ -286,6 +297,31 @@ const buildTools = (): ToolDefinition[] => [
       additionalProperties: false,
     },
     execute: async () => text(await listLocalWorkspaceIds()),
+  },
+  {
+    name: 'get_workspace_info',
+    title: 'Get Workspace Info',
+    description:
+      'Get workspace metadata including name, document count, and avatar key.',
+    inputSchema: {
+      type: 'object',
+      properties: { workspaceId: { type: 'string' } },
+      additionalProperties: false,
+    },
+    execute: async args => {
+      const workspaceId = await getWritableWorkspaceId(args);
+      const rootBin = await getMergedDocUpdate(workspaceId, workspaceId);
+      if (!rootBin) return error(`Workspace ${workspaceId} not found.`);
+      const { parseWorkspaceDoc } = await loadServerNative();
+      const info = parseWorkspaceDoc(rootBin);
+      const docs = await listDocumentMetas(workspaceId);
+      return text({
+        workspaceId,
+        name: info?.name ?? 'Untitled',
+        avatarKey: info?.avatarKey ?? null,
+        docCount: docs.length,
+      });
+    },
   },
   {
     name: 'list_documents',
@@ -434,12 +470,14 @@ const buildTools = (): ToolDefinition[] => [
         await loadServerNative();
 
       const docId = nanoid();
-      await pool.pushUpdate(
+      await pushUpdateAndNotify(
+        pool,
         universalId,
         workspaceId,
         addDocToRootDoc(rootBin, docId, title)
       );
-      await pool.pushUpdate(
+      await pushUpdateAndNotify(
+        pool,
         universalId,
         docId,
         createDocWithMarkdown(title, content, docId)
@@ -473,13 +511,84 @@ const buildTools = (): ToolDefinition[] => [
 
       const { pool, universalId } = await ensureWorkspaceConnected(workspaceId);
       const { updateDocWithMarkdown } = await loadServerNative();
-      await pool.pushUpdate(
+      await pushUpdateAndNotify(
+        pool,
         universalId,
         docId,
         updateDocWithMarkdown(docBin, content, docId)
       );
 
       return text({ success: true, workspaceId, docId });
+    },
+  },
+  {
+    name: 'append_to_document',
+    title: 'Append to Document',
+    description:
+      'Append Markdown content to the end of an existing document without replacing existing content.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        workspaceId: { type: 'string' },
+        docId: { type: 'string' },
+        content: { type: 'string' },
+      },
+      required: ['docId', 'content'],
+      additionalProperties: false,
+    },
+    execute: async args => {
+      const docId = parseStringArg(args, 'docId');
+      const workspaceId = await getWorkspaceIdForDoc(args, docId);
+      const appendContent = parseStringArg(args, 'content');
+      const docBin = await getMergedDocUpdate(workspaceId, docId);
+      if (!docBin) return error(`Doc with id ${docId} not found.`);
+
+      const { parseDocToMarkdown, updateDocWithMarkdown } =
+        await loadServerNative();
+      const existing = parseDocToMarkdown(docBin, docId, false);
+      const merged = existing.markdown.trimEnd() + '\n\n' + appendContent;
+
+      const { pool, universalId } = await ensureWorkspaceConnected(workspaceId);
+      await pushUpdateAndNotify(
+        pool,
+        universalId,
+        docId,
+        updateDocWithMarkdown(docBin, merged, docId)
+      );
+
+      return text({ success: true, workspaceId, docId });
+    },
+  },
+  {
+    name: 'get_document_outline',
+    title: 'Get Document Outline',
+    description:
+      'Return the heading structure (outline) of a document as a list of headings with levels.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        workspaceId: { type: 'string' },
+        docId: { type: 'string' },
+      },
+      required: ['docId'],
+      additionalProperties: false,
+    },
+    execute: async args => {
+      const docId = parseStringArg(args, 'docId');
+      const workspaceId = await getWorkspaceIdForDoc(args, docId);
+      const docBin = await getMergedDocUpdate(workspaceId, docId);
+      if (!docBin) return error(`Doc with id ${docId} not found.`);
+
+      const { parseDocToMarkdown } = await loadServerNative();
+      const { markdown, title } = parseDocToMarkdown(docBin, docId, false);
+      const headings: { level: number; text: string }[] = [];
+      for (const line of markdown.split('\n')) {
+        const match = line.match(/^(#{1,6})\s+(.+)/);
+        if (match) {
+          headings.push({ level: match[1].length, text: match[2].trim() });
+        }
+      }
+      return text({ title, headings });
     },
   },
   {
@@ -513,12 +622,14 @@ const buildTools = (): ToolDefinition[] => [
       const { pool, universalId } = await ensureWorkspaceConnected(workspaceId);
       const { updateRootDocMetaTitle, updateDocTitle } =
         await loadServerNative();
-      await pool.pushUpdate(
+      await pushUpdateAndNotify(
+        pool,
         universalId,
         workspaceId,
         updateRootDocMetaTitle(rootBin, docId, title)
       );
-      await pool.pushUpdate(
+      await pushUpdateAndNotify(
+        pool,
         universalId,
         docId,
         updateDocTitle(docBin, title, docId)
@@ -581,13 +692,29 @@ const readBody = async (req: IncomingMessage) =>
     req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
   });
 
-const writeJson = (res: ServerResponse, status: number, data: unknown) => {
-  res.writeHead(status, {
+const corsHeaders = (req: IncomingMessage) => {
+  const origin = req.headers.origin ?? '*';
+  const allowed =
+    origin === '*' ||
+    /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+  return {
     'content-type': 'application/json',
-    'access-control-allow-origin': 'http://127.0.0.1',
-    'access-control-allow-methods': 'POST, OPTIONS',
+    'access-control-allow-origin': allowed ? origin : 'http://localhost',
+    'access-control-allow-methods': 'POST, GET, OPTIONS',
     'access-control-allow-headers': 'content-type',
-  });
+  };
+};
+
+const writeJson = (
+  res: ServerResponse,
+  status: number,
+  data: unknown,
+  req?: IncomingMessage
+) => {
+  res.writeHead(
+    status,
+    req ? corsHeaders(req) : { 'content-type': 'application/json' }
+  );
   res.end(JSON.stringify(data));
 };
 
@@ -671,11 +798,34 @@ export function startMcpServer() {
   const port = Number(process.env.AFFINE_MCP_PORT || DEFAULT_PORT);
   const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
     if (req.method === 'OPTIONS') {
-      writeJson(res, 204, {});
+      res.writeHead(204, corsHeaders(req));
+      res.end();
       return;
     }
+
+    // SSE transport endpoint
+    if (req.method === 'GET' && req.url === '/sse') {
+      const headers = {
+        ...corsHeaders(req),
+        'content-type': 'text/event-stream',
+        'cache-control': 'no-cache',
+        connection: 'keep-alive',
+      };
+      res.writeHead(200, headers);
+      res.write(
+        `data: ${JSON.stringify({ type: 'endpoint', url: '/mcp' })}\n\n`
+      );
+
+      const keepAlive = setInterval(() => {
+        res.write(': ping\n\n');
+      }, 15000);
+
+      req.on('close', () => clearInterval(keepAlive));
+      return;
+    }
+
     if (req.method !== 'POST' || req.url !== '/mcp') {
-      writeJson(res, 404, { error: 'Not found' });
+      writeJson(res, 404, { error: 'Not found' }, req);
       return;
     }
 
@@ -688,21 +838,21 @@ export function startMcpServer() {
       ).filter(Boolean);
 
       if (!responses.length) {
-        res.writeHead(202);
+        res.writeHead(202, corsHeaders(req));
         res.end();
         return;
       }
-      writeJson(res, 200, isBatch ? responses : responses[0]);
+      writeJson(res, 200, isBatch ? responses : responses[0], req);
     } catch (err) {
       logger.error('[mcp] request failed', err);
-      writeJson(res, 500, failure(null, -32603, 'Internal error'));
+      writeJson(res, 500, failure(null, -32603, 'Internal error'), req);
     }
   };
 
   const server = createServer((req, res) => {
     handleRequest(req, res).catch(err => {
       logger.error('[mcp] unexpected request failure', err);
-      writeJson(res, 500, failure(null, -32603, 'Internal error'));
+      writeJson(res, 500, failure(null, -32603, 'Internal error'), req);
     });
   });
 
