@@ -372,6 +372,22 @@ export default {
         Promise.all([
           trimElectronFrameworkLocales(buildPath, targetPlatform),
           trimElectronPakLocales(buildPath, targetPlatform),
+          // Remove source maps from web-static to reduce package size (~72MB)
+          (async () => {
+            if (process.env.KEEP_SOURCE_MAPS === '1') return;
+            const webStaticDir = path.join(buildPath, 'web-static', 'js');
+            let entries;
+            try {
+              entries = await readdir(webStaticDir, { withFileTypes: true });
+            } catch {
+              return;
+            }
+            await Promise.all(
+              entries
+                .filter(e => e.isFile() && e.name.endsWith('.map'))
+                .map(e => rm(path.join(webStaticDir, e.name), { force: true }))
+            );
+          })(),
         ])
           .then(() => done())
           .catch(done);
