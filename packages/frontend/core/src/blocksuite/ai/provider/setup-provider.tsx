@@ -64,6 +64,79 @@ async function shouldUseLocalAI(workspaceId?: string, sessionId?: string) {
   );
 }
 
+type LocalChatMessageRecord = {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+};
+
+type LocalChatSessionRecord = {
+  sessionId: string;
+  workspaceId: string;
+  docId?: string | null;
+  promptName?: string;
+  model?: string;
+  title?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  messages: LocalChatMessageRecord[];
+};
+
+function chatHistoryApi(): any {
+  return isLocalBuild() ? (apis as any)?.chatHistory : undefined;
+}
+
+async function readLocalSession(
+  workspaceId: string,
+  sessionId: string
+): Promise<LocalChatSessionRecord | null> {
+  const api = chatHistoryApi();
+  if (!api?.getSession) return null;
+  try {
+    return (await api.getSession(workspaceId, sessionId)) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function listLocalSessions(
+  workspaceId: string,
+  docId?: string
+): Promise<LocalChatSessionRecord[]> {
+  const api = chatHistoryApi();
+  if (!api?.listSessions) return [];
+  try {
+    return (await api.listSessions(workspaceId, { docId })) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+function toAIHistory(session: LocalChatSessionRecord): any {
+  return {
+    sessionId: session.sessionId,
+    workspaceId: session.workspaceId,
+    docId: session.docId ?? null,
+    promptName: session.promptName ?? 'Chat With AFFiNE AI',
+    model: session.model ?? 'local',
+    action: null,
+    pinned: false,
+    title: session.title ?? null,
+    tokens: 0,
+    createdAt: session.createdAt,
+    updatedAt: session.updatedAt,
+    messages: session.messages.map(m => ({
+      id: m.id,
+      role: m.role,
+      content: m.content,
+      createdAt: m.createdAt,
+      attachments: [],
+      streamObjects: null,
+    })),
+  };
+}
+
 function createLocalSession(
   options: BlockSuitePresets.AICreateSessionOptions,
   sessionId = `local-${crypto.randomUUID()}`
@@ -671,6 +744,33 @@ Could you make a new website based on these notes and send back just the html fi
     },
     getSession: async (workspaceId: string, sessionId: string) => {
       if (isLocalSessionId(sessionId)) {
+        const session = await readLocalSession(workspaceId, sessionId);
+        if (session) {
+          return {
+            __typename: 'CopilotHistories' as const,
+            sessionId: session.sessionId,
+            workspaceId: session.workspaceId,
+            docId: session.docId ?? null,
+            parentSessionId: null,
+            promptName: session.promptName ?? 'Chat With AFFiNE AI',
+            model: session.model ?? 'local',
+            optionalModels: [],
+            action: null,
+            pinned: false,
+            title: session.title ?? null,
+            tokens: 0,
+            messages: session.messages.map(m => ({
+              id: m.id,
+              role: m.role,
+              content: m.content,
+              createdAt: m.createdAt,
+              attachments: [],
+              streamObjects: null,
+            })),
+            createdAt: session.createdAt,
+            updatedAt: session.updatedAt,
+          } as any;
+        }
         return createLocalSession({
           workspaceId,
           sessionId,
@@ -685,7 +785,23 @@ Could you make a new website based on these notes and send back just the html fi
       options?: QueryChatSessionsInput
     ) => {
       if (await hasLocalChatProvider(workspaceId)) {
-        return [];
+        const sessions = await listLocalSessions(workspaceId, docId);
+        return sessions.map(s => ({
+          id: s.sessionId,
+          sessionId: s.sessionId,
+          workspaceId: s.workspaceId,
+          docId: s.docId ?? null,
+          parentSessionId: null,
+          promptName: s.promptName ?? 'Chat With AFFiNE AI',
+          model: s.model ?? 'local',
+          optionalModels: [],
+          action: null,
+          pinned: false,
+          title: s.title ?? null,
+          tokens: 0,
+          createdAt: s.createdAt,
+          updatedAt: s.updatedAt,
+        })) as any;
       }
       return client.getSessions(workspaceId, {}, docId, options);
     },
@@ -695,7 +811,26 @@ Could you make a new website based on these notes and send back just the html fi
       offset?: number
     ) => {
       if (await hasLocalChatProvider(workspaceId)) {
-        return [];
+        const sessions = await listLocalSessions(workspaceId);
+        return sessions.slice(offset ?? 0, (offset ?? 0) + (limit ?? 20)).map(
+          s =>
+            ({
+              id: s.sessionId,
+              sessionId: s.sessionId,
+              workspaceId: s.workspaceId,
+              docId: s.docId ?? null,
+              parentSessionId: null,
+              promptName: s.promptName ?? 'Chat With AFFiNE AI',
+              model: s.model ?? 'local',
+              optionalModels: [],
+              action: null,
+              pinned: false,
+              title: s.title ?? null,
+              tokens: 0,
+              createdAt: s.createdAt,
+              updatedAt: s.updatedAt,
+            }) as any
+        );
       }
       return client.getRecentSessions(workspaceId, limit, offset);
     },
@@ -905,8 +1040,15 @@ Could you make a new website based on these notes and send back just the html fi
       sessionId: string,
       docId?: string
     ): Promise<BlockSuitePresets.AIHistory[]> => {
-      if (await shouldUseLocalAI(workspaceId, sessionId)) {
-        return [];
+      // For local sessions, load from local chat history storage
+      if (isLocalSessionId(sessionId)) {
+        const session = await readLocalSession(workspaceId, sessionId);
+        return session ? [toAIHistory(session)] : [];
+      }
+      // If local chat provider is enabled but no specific session, list all local sessions
+      if (await hasLocalChatProvider(workspaceId)) {
+        const sessions = await listLocalSessions(workspaceId, docId);
+        return sessions.map(toAIHistory);
       }
       // @ts-expect-error - 'action' is missing in server impl
       return (
@@ -921,13 +1063,22 @@ Could you make a new website based on these notes and send back just the html fi
       docId: string | undefined,
       sessionIds: string[]
     ) => {
-      if (
-        (await hasLocalChatProvider(workspaceId)) ||
-        sessionIds.every(isLocalSessionId)
-      ) {
-        return;
+      // Delete local sessions if any
+      const localIds = sessionIds.filter(isLocalSessionId);
+      if (localIds.length) {
+        const api = chatHistoryApi();
+        if (api?.deleteSessions) {
+          await api.deleteSessions(workspaceId, localIds).catch(() => {});
+        }
       }
-      await client.cleanupSessions({ workspaceId, docId, sessionIds });
+      const serverIds = sessionIds.filter(id => !isLocalSessionId(id));
+      if (!serverIds.length) return;
+      if (await hasLocalChatProvider(workspaceId)) return;
+      await client.cleanupSessions({
+        workspaceId,
+        docId,
+        sessionIds: serverIds,
+      });
     },
     ids: async (
       workspaceId: string,
@@ -937,7 +1088,18 @@ Could you make a new website based on these notes and send back just the html fi
       >['variables']['options']
     ): Promise<BlockSuitePresets.AIHistoryIds[]> => {
       if (await hasLocalChatProvider(workspaceId)) {
-        return [];
+        const sessions = await listLocalSessions(workspaceId, docId);
+        return sessions.map(
+          s =>
+            ({
+              sessionId: s.sessionId,
+              messages: s.messages.map(m => ({
+                id: m.id,
+                role: m.role,
+                createdAt: m.createdAt,
+              })),
+            }) as any
+        );
       }
       // @ts-expect-error - 'action' is missing in server impl
       return await client.getHistoryIds(workspaceId, {}, docId, options);

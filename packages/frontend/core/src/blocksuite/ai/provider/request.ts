@@ -142,6 +142,7 @@ async function localTextToText({
   content,
   params,
   modelId,
+  sessionId,
 }: TextToTextOptions) {
   const storage = byokStorageApi();
   if (!workspaceId || !storage) {
@@ -155,8 +156,28 @@ async function localTextToText({
     throw new Error('Set a custom model id in Settings > AI first.');
   }
 
+  const chatHistory = (apis as any)?.chatHistory;
+  const isLocalSession =
+    typeof sessionId === 'string' && sessionId.startsWith('local-');
+
+  // Persist user message first
+  if (isLocalSession && chatHistory?.appendMessage && content) {
+    await chatHistory
+      .appendMessage(
+        workspaceId,
+        { sessionId, docId: params?.currentDocId, model: modelId },
+        {
+          id: `msg-${Date.now()}-u`,
+          role: 'user',
+          content,
+          createdAt: new Date().toISOString(),
+        }
+      )
+      .catch(() => {});
+  }
+
   try {
-    return await storage.chatCompletions(workspaceId, {
+    const response = await storage.chatCompletions(workspaceId, {
       modelId,
       content,
       contexts: {
@@ -166,6 +187,24 @@ async function localTextToText({
         html: params?.html,
       },
     });
+
+    // Persist AI response
+    if (isLocalSession && chatHistory?.appendMessage && response) {
+      await chatHistory
+        .appendMessage(
+          workspaceId,
+          { sessionId, docId: params?.currentDocId, model: modelId },
+          {
+            id: `msg-${Date.now()}-a`,
+            role: 'assistant',
+            content: response,
+            createdAt: new Date().toISOString(),
+          }
+        )
+        .catch(() => {});
+    }
+
+    return response;
   } catch (error) {
     throw new Error(error instanceof Error ? error.message : String(error));
   }

@@ -3,6 +3,7 @@ import { ipcMain } from 'electron';
 
 import { AFFINE_API_CHANNEL_NAME } from '../shared/type';
 import { byokStorageHandlers } from './byok-storage/handlers';
+import { chatHistoryHandlers } from './chat-history/handlers';
 import { clipboardHandlers } from './clipboard';
 import { configStorageHandlers } from './config-storage';
 import { findInPageHandlers } from './find-in-page';
@@ -44,6 +45,7 @@ export const allHandlers = {
   popup: popupHandlers,
   i18n: i18nHandlers,
   byokStorage: byokStorageHandlers,
+  chatHistory: chatHistoryHandlers,
 };
 
 export const registerHandlers = () => {
