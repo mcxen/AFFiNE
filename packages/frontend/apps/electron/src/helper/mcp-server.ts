@@ -680,6 +680,236 @@ const buildTools = (): ToolDefinition[] => [
       return text({ success: true, workspaceId, docId });
     },
   },
+  // ─── Journal Tools ─────────────────────────────────────────────────
+  {
+    name: 'get_journal',
+    title: 'Get Journal',
+    description:
+      'Get today\'s journal (or a specific date). Creates it if it does not exist. Date format: YYYY-MM-DD.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        workspaceId: { type: 'string' },
+        date: { type: 'string', description: 'YYYY-MM-DD, defaults to today' },
+      },
+      additionalProperties: false,
+    },
+    execute: async args => {
+      const workspaceId = await getWritableWorkspaceId(args);
+      const date =
+        parseStringArg(args, 'date', false) ||
+        new Date().toISOString().slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return error('Invalid date format. Use YYYY-MM-DD.');
+      }
+
+      const docs = await listDocumentMetas(workspaceId);
+      const existing = docs.find(d => d.title === date);
+      if (existing) {
+        const docBin = await getMergedDocUpdate(workspaceId, existing.docId);
+        if (docBin) {
+          const { parseDocToMarkdown } = await loadServerNative();
+          const result = parseDocToMarkdown(docBin, existing.docId, false);
+          return text({
+            workspaceId,
+            docId: existing.docId,
+            date,
+            markdown: result.markdown,
+          });
+        }
+      }
+
+      // Create new journal
+      const { pool, universalId } = await ensureWorkspaceConnected(workspaceId);
+      const rootBin = await getMergedDocUpdate(workspaceId, workspaceId);
+      if (!rootBin) return error(`Workspace ${workspaceId} not found.`);
+      const { addDocToRootDoc, createDocWithMarkdown } =
+        await loadServerNative();
+      const docId = nanoid();
+      await pushUpdateAndNotify(pool, universalId, workspaceId, addDocToRootDoc(rootBin, docId, date));
+      await pushUpdateAndNotify(pool, universalId, docId, createDocWithMarkdown(date, '', docId));
+      return text({ workspaceId, docId, date, markdown: '', created: true });
+    },
+  },
+  {
+    name: 'update_journal',
+    title: 'Update Journal',
+    description:
+      'Replace the content of today\'s journal (or a specific date) with new Markdown.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        workspaceId: { type: 'string' },
+        date: { type: 'string', description: 'YYYY-MM-DD, defaults to today' },
+        content: { type: 'string' },
+      },
+      required: ['content'],
+      additionalProperties: false,
+    },
+    execute: async args => {
+      const workspaceId = await getWritableWorkspaceId(args);
+      const date =
+        parseStringArg(args, 'date', false) ||
+        new Date().toISOString().slice(0, 10);
+      const content = parseStringArg(args, 'content');
+
+      const docs = await listDocumentMetas(workspaceId);
+      let docId = docs.find(d => d.title === date)?.docId;
+
+      if (!docId) {
+        // Create journal first
+        const { pool, universalId } =
+          await ensureWorkspaceConnected(workspaceId);
+        const rootBin = await getMergedDocUpdate(workspaceId, workspaceId);
+        if (!rootBin) return error(`Workspace ${workspaceId} not found.`);
+        const { addDocToRootDoc, createDocWithMarkdown } =
+          await loadServerNative();
+        docId = nanoid();
+        await pushUpdateAndNotify(pool, universalId, workspaceId, addDocToRootDoc(rootBin, docId, date));
+        await pushUpdateAndNotify(pool, universalId, docId, createDocWithMarkdown(date, content, docId));
+        return text({ success: true, workspaceId, docId, date, created: true });
+      }
+
+      const docBin = await getMergedDocUpdate(workspaceId, docId);
+      if (!docBin) return error(`Journal doc not found.`);
+      const { pool, universalId } = await ensureWorkspaceConnected(workspaceId);
+      const { updateDocWithMarkdown } = await loadServerNative();
+      await pushUpdateAndNotify(pool, universalId, docId, updateDocWithMarkdown(docBin, content, docId));
+      return text({ success: true, workspaceId, docId, date });
+    },
+  },
+  {
+    name: 'append_to_journal',
+    title: 'Append to Journal',
+    description:
+      'Append Markdown content to today\'s journal (or a specific date) without replacing existing content.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        workspaceId: { type: 'string' },
+        date: { type: 'string', description: 'YYYY-MM-DD, defaults to today' },
+        content: { type: 'string' },
+      },
+      required: ['content'],
+      additionalProperties: false,
+    },
+    execute: async args => {
+      const workspaceId = await getWritableWorkspaceId(args);
+      const date =
+        parseStringArg(args, 'date', false) ||
+        new Date().toISOString().slice(0, 10);
+      const appendContent = parseStringArg(args, 'content');
+
+      const docs = await listDocumentMetas(workspaceId);
+      let docId = docs.find(d => d.title === date)?.docId;
+
+      if (!docId) {
+        const { pool, universalId } =
+          await ensureWorkspaceConnected(workspaceId);
+        const rootBin = await getMergedDocUpdate(workspaceId, workspaceId);
+        if (!rootBin) return error(`Workspace ${workspaceId} not found.`);
+        const { addDocToRootDoc, createDocWithMarkdown } =
+          await loadServerNative();
+        docId = nanoid();
+        await pushUpdateAndNotify(pool, universalId, workspaceId, addDocToRootDoc(rootBin, docId, date));
+        await pushUpdateAndNotify(pool, universalId, docId, createDocWithMarkdown(date, appendContent, docId));
+        return text({ success: true, workspaceId, docId, date, created: true });
+      }
+
+      const docBin = await getMergedDocUpdate(workspaceId, docId);
+      if (!docBin) return error(`Journal doc not found.`);
+      const { parseDocToMarkdown, updateDocWithMarkdown } =
+        await loadServerNative();
+      const existing = parseDocToMarkdown(docBin, docId, false);
+      const merged = existing.markdown.trimEnd() + '\n\n' + appendContent;
+      const { pool, universalId } = await ensureWorkspaceConnected(workspaceId);
+      await pushUpdateAndNotify(pool, universalId, docId, updateDocWithMarkdown(docBin, merged, docId));
+      return text({ success: true, workspaceId, docId, date });
+    },
+  },
+  {
+    name: 'clear_journal',
+    title: 'Clear Journal',
+    description: 'Clear the content of a journal for a specific date.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        workspaceId: { type: 'string' },
+        date: { type: 'string', description: 'YYYY-MM-DD, defaults to today' },
+      },
+      additionalProperties: false,
+    },
+    execute: async args => {
+      const workspaceId = await getWritableWorkspaceId(args);
+      const date =
+        parseStringArg(args, 'date', false) ||
+        new Date().toISOString().slice(0, 10);
+
+      const docs = await listDocumentMetas(workspaceId);
+      const docId = docs.find(d => d.title === date)?.docId;
+      if (!docId) return error(`No journal found for ${date}.`);
+
+      const docBin = await getMergedDocUpdate(workspaceId, docId);
+      if (!docBin) return error(`Journal doc not found.`);
+      const { pool, universalId } = await ensureWorkspaceConnected(workspaceId);
+      const { updateDocWithMarkdown } = await loadServerNative();
+      await pushUpdateAndNotify(pool, universalId, docId, updateDocWithMarkdown(docBin, '', docId));
+      return text({ success: true, workspaceId, docId, date });
+    },
+  },
+  {
+    name: 'list_today_documents',
+    title: 'List Today\'s Documents',
+    description:
+      'List all documents created or updated today. Useful for summarizing daily work into the journal.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        workspaceId: { type: 'string' },
+        date: { type: 'string', description: 'YYYY-MM-DD, defaults to today' },
+      },
+      additionalProperties: false,
+    },
+    execute: async args => {
+      const workspaceIds = await getWorkspaceIds(args);
+      const date =
+        parseStringArg(args, 'date', false) ||
+        new Date().toISOString().slice(0, 10);
+      const dayStart = new Date(date + 'T00:00:00').getTime();
+      const dayEnd = dayStart + 86400000;
+
+      const results: {
+        workspaceId: string;
+        docId: string;
+        title: string;
+        createdAt: unknown;
+        updatedAt: unknown;
+      }[] = [];
+
+      for (const workspaceId of workspaceIds) {
+        const docs = await listDocumentMetas(workspaceId);
+        for (const doc of docs) {
+          const created =
+            typeof doc.createdAt === 'number' ? doc.createdAt : 0;
+          const updated =
+            typeof doc.updatedAt === 'number' ? doc.updatedAt : 0;
+          if (
+            (created >= dayStart && created < dayEnd) ||
+            (updated >= dayStart && updated < dayEnd)
+          ) {
+            results.push({
+              workspaceId,
+              docId: doc.docId,
+              title: doc.title,
+              createdAt: doc.createdAt,
+              updatedAt: doc.updatedAt,
+            });
+          }
+        }
+      }
+      return text(results);
+    },
+  },
 ];
 
 const tools = buildTools();
