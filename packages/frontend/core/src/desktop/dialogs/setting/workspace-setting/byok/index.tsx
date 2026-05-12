@@ -31,6 +31,7 @@ import { KeyList } from './key-list';
 import {
   clearLocalKeys,
   deleteLocalKey,
+  fetchLocalModels,
   localByokStorageSupported,
   readLocalKeys,
   reorderLocalKeys,
@@ -88,6 +89,10 @@ export const WorkspaceByokSetting = () => {
     id: string;
     storage: ByokStorage;
   } | null>(null);
+  const [availableModels, setAvailableModels] = useState<
+    { id: string; name?: string }[]
+  >([]);
+  const [fetchingModels, setFetchingModels] = useState(false);
 
   const load = useCallback(async () => {
     const [localStorageSupported, nextLocalKeys] = await Promise.all([
@@ -395,19 +400,68 @@ export const WorkspaceByokSetting = () => {
               <div>
                 <div className={styles.title}>Custom model</div>
                 <div className={styles.description}>
-                  Use a custom chat model id with your BYOK provider, for
-                  example gpt-4o, gpt-4.1, claude-3-5-sonnet-latest, or
-                  gemini-2.5-pro.
+                  Use a custom chat model id with your BYOK provider. You can
+                  fetch available models from your endpoint or enter a model id
+                  manually.
                 </div>
               </div>
+              <Button
+                disabled={fetchingModels || !localKeys.length}
+                onClick={() => {
+                  setFetchingModels(true);
+                  fetchLocalModels(workspace.id)
+                    .then(models => {
+                      setAvailableModels(models);
+                      if (!models.length) {
+                        notify.error({
+                          title: 'No models found',
+                          message:
+                            'Could not fetch models from the endpoint. Check your API key and endpoint.',
+                        });
+                      } else {
+                        notify.success({
+                          title: `${models.length} models loaded`,
+                        });
+                      }
+                    })
+                    .catch(error => {
+                      logByokError('Failed to fetch models', error);
+                      notify.error({
+                        title: 'Failed to fetch models',
+                        message:
+                          error instanceof Error
+                            ? error.message
+                            : String(error),
+                      });
+                    })
+                    .finally(() => setFetchingModels(false));
+                }}
+              >
+                {fetchingModels ? 'Fetching...' : 'Fetch Models'}
+              </Button>
             </div>
             <div className={styles.modelForm}>
-              <input
-                className={styles.input}
-                value={customModelId}
-                onChange={event => setCustomModelId(event.target.value)}
-                placeholder="Provider model id"
-              />
+              {availableModels.length > 0 ? (
+                <select
+                  className={styles.input}
+                  value={customModelId}
+                  onChange={event => setCustomModelId(event.target.value)}
+                >
+                  <option value="">Select a model...</option>
+                  {availableModels.map(model => (
+                    <option key={model.id} value={model.id}>
+                      {model.name || model.id}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  className={styles.input}
+                  value={customModelId}
+                  onChange={event => setCustomModelId(event.target.value)}
+                  placeholder="Provider model id (e.g. gpt-4o, claude-3-5-sonnet)"
+                />
+              )}
               <Button
                 onClick={() => {
                   checkModelConnectivity().catch(error => {
@@ -419,7 +473,7 @@ export const WorkspaceByokSetting = () => {
                 }}
                 disabled={checkingModel}
               >
-                {checkingModel ? 'Checking...' : 'Check connectivity'}
+                {checkingModel ? 'Checking...' : 'Check'}
               </Button>
               <Button
                 variant="primary"

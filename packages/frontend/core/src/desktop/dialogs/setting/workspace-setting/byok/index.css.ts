@@ -214,7 +214,7 @@ export const modalActions = style({
 
 export const modelForm = style({
   display: 'grid',
-  gridTemplateColumns: '1fr auto',
+  gridTemplateColumns: '1fr auto auto',
   alignItems: 'center',
   gap: 12,
   padding: '12px 16px',

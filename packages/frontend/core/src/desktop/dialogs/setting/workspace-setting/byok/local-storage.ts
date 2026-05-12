@@ -129,3 +129,23 @@ export async function testLocalChatModel(workspaceId: string, modelId: string) {
 
   return await tester(workspaceId, modelId);
 }
+
+export async function fetchLocalModels(
+  workspaceId: string,
+  keyId?: string
+): Promise<{ id: string; name?: string }[]> {
+  const storage = byokStorageApi();
+  if (!(await localByokStorageSupported()) || !storage) {
+    return [];
+  }
+  const fetcher = (storage as any).fetchWorkspaceModels;
+  if (typeof fetcher !== 'function') {
+    return [];
+  }
+  try {
+    return await fetcher(workspaceId, keyId);
+  } catch (e) {
+    logByokError('Failed to fetch local models', e);
+    return [];
+  }
+}

@@ -381,4 +381,37 @@ export const byokStorageHandlers = {
     byokStorage.del(workspaceId);
     return true;
   },
+  fetchWorkspaceModels: async (
+    _e,
+    workspaceId: string,
+    keyId?: string
+  ): Promise<{ id: string; name?: string }[]> => {
+    const keys = readWorkspaceKeysWithFallback(workspaceId).filter(
+      key => key.enabled !== false && key.provider === 'openai'
+    );
+    const target = keyId ? keys.find(k => k.id === keyId) : keys[0];
+    if (!target) {
+      return [];
+    }
+    const baseURL = normalizeOpenAIEndpoint(target.endpoint);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    try {
+      const res = await fetch(`${baseURL}/models`, {
+        headers: { Authorization: `Bearer ${target.apiKey}` },
+        signal: controller.signal,
+      });
+      if (!res.ok) return [];
+      const json = (await res.json()) as {
+        data?: { id: string; name?: string }[];
+      };
+      return (json.data ?? [])
+        .map(m => ({ id: m.id, name: m.name }))
+        .sort((a, b) => a.id.localeCompare(b.id));
+    } catch {
+      return [];
+    } finally {
+      clearTimeout(timeout);
+    }
+  },
 } satisfies NamespaceHandlers;
