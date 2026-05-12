@@ -1,7 +1,7 @@
 name: affine
 services:
   affine:
-    image: ghcr.io/toeverything/affine:${AFFINE_REVISION:-stable}
+    image: affine-local:latest
     container_name: affine_server
     ports:
       - '${PORT:-3010}:3010'
@@ -22,16 +22,18 @@ services:
       - REDIS_SERVER_HOST=redis
       - DATABASE_URL=postgresql://${DB_USERNAME}:${DB_PASSWORD}@postgres:5432/${DB_DATABASE:-affine}
       - AFFINE_INDEXER_ENABLED=false
+      # Node.js memory limit for large workspaces
+      - NODE_OPTIONS=--max-old-space-size=4096
     restart: unless-stopped
 
   affine_migration:
-    image: ghcr.io/toeverything/affine:${AFFINE_REVISION:-stable}
+    image: affine-local:latest
     container_name: affine_migration_job
     volumes:
       # custom configurations
       - ${UPLOAD_LOCATION}:/root/.affine/storage
       - ${CONFIG_LOCATION}:/root/.affine/config
-    command: ['sh', '-c', 'node ./scripts/self-host-predeploy.js']
+    command: ['sh', '-c', 'node ./scripts/self-host-predeploy.js; exit 0']
     env_file:
       - .env
     environment:

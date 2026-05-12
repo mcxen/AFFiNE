@@ -1,0 +1,87 @@
+# syntax=docker/dockerfile:1.7
+#
+# AFFiNE 本地编译 Docker 镜像
+# 使用方法:
+#   1. 在项目根目录执行 yarn build (或使用 build-local.sh 自动编译)
+#   2. docker build -f .docker/selfhost/Dockerfile.local -t affine-local:latest .
+#
+# 要求: 项目已编译完成，包含以下目录:
+#   - packages/backend/server/dist
+#   - packages/frontend/apps/web/dist
+#   - packages/frontend/admin/dist (可选)
+#   - packages/frontend/apps/mobile/dist (可选)
+
+FROM node:22-bookworm-slim AS deps
+WORKDIR /workspace
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends openssl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# 复制包管理器配置
+COPY package.json yarn.lock .yarnrc.yml ./
+COPY .yarn/ .yarn/
+
+# 复制 server 包信息
+COPY packages/backend/server/package.json packages/backend/server/
+COPY packages/backend/server/schema.prisma packages/backend/server/
+
+# 复制 native 包 (预编译的 Rust 绑定)
+COPY packages/backend/native/package.json packages/backend/native/
+COPY packages/backend/native/index.js packages/backend/native/
+COPY packages/backend/native/index.d.ts packages/backend/native/
+COPY packages/backend/native/server-native.*.node packages/backend/native/
+
+# 复制 s3-compat 包
+COPY packages/common/s3-compat/package.json packages/common/s3-compat/
+
+# 安装生产依赖
+RUN corepack enable && \
+    yarn config set --json supportedArchitectures.cpu '["x64", "arm64", "arm"]' && \
+    yarn config set --json supportedArchitectures.libc '["glibc"]' && \
+    YARN_ENABLE_IMMUTABLE_INSTALLS=false yarn workspaces focus @affine/server --production
+
+# 生成 Prisma 客户端
+RUN yarn workspace @affine/server prisma generate
+
+# 复制编译产物
+COPY packages/backend/server/dist packages/backend/server/dist
+COPY packages/backend/server/scripts packages/backend/server/scripts
+
+# 复制前端编译产物
+COPY packages/frontend/apps/web/dist packages/frontend/apps/web/dist
+
+# 可选: admin 和 mobile 前端
+COPY packages/frontend/admin/dist packages/frontend/admin/dist
+COPY packages/frontend/apps/mobile/dist packages/frontend/apps/mobile/dist
+
+# 清理不需要的文件，减小镜像体积
+ARG TARGETARCH
+ARG TARGETVARIANT
+RUN cd packages/backend/server && \
+    mv /workspace/node_modules . && \
+    AFFINE_DOCKER_CLEAN=1 TARGETARCH="${TARGETARCH}" TARGETVARIANT="${TARGETVARIANT}" \
+    node ./scripts/docker-clean.mjs
+
+
+FROM node:22-bookworm-slim
+WORKDIR /app
+
+# 复制 server (包含 node_modules, dist, scripts, prisma)
+COPY --from=deps /workspace/packages/backend/server /app
+
+# 复制前端静态文件
+COPY --from=deps /workspace/packages/frontend/apps/web/dist /app/static
+COPY --from=deps /workspace/packages/frontend/admin/dist /app/static/admin
+COPY --from=deps /workspace/packages/frontend/apps/mobile/dist /app/static/mobile
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends openssl libjemalloc2 && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV LD_PRELOAD=libjemalloc.so.2
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
+EXPOSE 3010
+
+CMD ["node", "./dist/main.js"]

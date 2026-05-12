@@ -1,0 +1,137 @@
+name: Build Selfhost ARM64 Image
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - canary
+    paths:
+      - '.docker/selfhost/**'
+      - '.github/actions/build-rust/**'
+      - '.github/actions/setup-node/**'
+      - '.github/workflows/build-selfhost-arm64-image.yml'
+      - '.yarn/**'
+      - '.yarnrc.yml'
+      - 'package.json'
+      - 'yarn.lock'
+      - 'packages/backend/native/**'
+      - 'packages/backend/server/**'
+      - 'packages/common/s3-compat/**'
+      - 'packages/frontend/admin/**'
+      - 'packages/frontend/apps/mobile/**'
+      - 'packages/frontend/apps/web/**'
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: selfhost-arm64-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/affine-selfhost
+  BUILD_TYPE: stable
+
+jobs:
+  build-and-push:
+    name: Build and Push ARM64 Image
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: ./.github/actions/setup-node
+        with:
+          electron-install: false
+          extra-flags: workspaces focus @affine/server @affine/server-native @types/affine__env
+
+      - name: Build server-native for ARM64
+        uses: ./.github/actions/build-rust
+        with:
+          target: aarch64-unknown-linux-gnu
+          package: '@affine/server-native'
+
+      - name: Rename ARM64 native module
+        run: mv ./packages/backend/native/server-native.node ./packages/backend/native/server-native.arm64.node
+
+      - name: Build Web
+        run: yarn affine @affine/web build
+        env:
+          BUILD_TYPE: ${{ env.BUILD_TYPE }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID || '' }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID || '' }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY || '' }}
+          CAPTCHA_SITE_KEY: ${{ secrets.CAPTCHA_SITE_KEY || '' }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG || '' }}
+          SENTRY_PROJECT: affine-web
+          SENTRY_RELEASE: ${{ github.sha }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN || '' }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN || '' }}
+          PERFSEE_TOKEN: ${{ secrets.PERFSEE_TOKEN || '' }}
+
+      - name: Build Admin
+        run: yarn affine @affine/admin build
+        env:
+          BUILD_TYPE: ${{ env.BUILD_TYPE }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID || '' }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID || '' }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY || '' }}
+          CAPTCHA_SITE_KEY: ${{ secrets.CAPTCHA_SITE_KEY || '' }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG || '' }}
+          SENTRY_PROJECT: affine-admin
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN || '' }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN || '' }}
+          PERFSEE_TOKEN: ${{ secrets.PERFSEE_TOKEN || '' }}
+
+      - name: Build Mobile
+        run: yarn affine @affine/mobile build
+        env:
+          BUILD_TYPE: ${{ env.BUILD_TYPE }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID || '' }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID || '' }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY || '' }}
+          CAPTCHA_SITE_KEY: ${{ secrets.CAPTCHA_SITE_KEY || '' }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG || '' }}
+          SENTRY_PROJECT: affine-mobile
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN || '' }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN || '' }}
+          PERFSEE_TOKEN: ${{ secrets.PERFSEE_TOKEN || '' }}
+
+      - name: Build Server
+        run: yarn workspace @affine/server build
+
+      - name: Compute image tags
+        id: meta
+        run: |
+          echo "sha_short=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push selfhost ARM64 image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: .docker/selfhost/Dockerfile
+          pull: true
+          push: true
+          provenance: true
+          platforms: linux/arm64
+          tags: |
+            ${{ env.IMAGE_NAME }}:arm64
+            ${{ env.IMAGE_NAME }}:arm64-${{ steps.meta.outputs.sha_short }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

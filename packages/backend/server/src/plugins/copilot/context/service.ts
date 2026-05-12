@@ -1,11 +1,6 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 
-import {
-  Cache,
-  CopilotInvalidContext,
-  NoCopilotProviderAvailable,
-  OnEvent,
-} from '../../../base';
+import { Cache, CopilotInvalidContext, OnEvent } from '../../../base';
 import {
   ContextConfig,
   ContextConfigSchema,
@@ -136,13 +131,6 @@ export class CopilotContextService implements OnApplicationBootstrap {
   }
 
   async get(id: string): Promise<ContextSession> {
-    if (!this.embeddingClient) {
-      throw new NoCopilotProviderAvailable(
-        { modelId: 'embedding' },
-        'embedding client not configured'
-      );
-    }
-
     const context = await this.getCachedSession(id);
     if (context) return context;
     const config = await this.models.copilotContext.getConfig(id);

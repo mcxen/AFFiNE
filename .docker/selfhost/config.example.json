@@ -1,32 +1,36 @@
 {
-  "$schema": "https://github.com/toeverything/affine/releases/latest/download/config.schema.json",
   "server": {
     "name": "AFFiNE Self Hosted Server"
   },
   "copilot": {
     "enabled": true,
     "byok.enabled": true,
+    "byok.allowedProviders": [
+      "openai",
+      "anthropic",
+      "gemini",
+      "fal"
+    ],
     "byok.allowCustomEndpoint": true,
     "providers.profiles": [
       {
-        "id": "local-openai",
+        "id": "openai-compat",
         "type": "openai",
-        "displayName": "Local OpenAI Compatible",
+        "displayName": "OpenAI Compatible API",
         "enabled": true,
         "priority": 100,
-        "models": ["gpt-4o-mini", "text-embedding-3-small"],
         "config": {
-          "apiKey": "local",
-          "baseURL": "http://host.docker.internal:11434/v1"
+          "apiKey": "YOUR_API_KEY",
+          "baseURL": "https://api.openai.com/v1"
         }
       }
     ],
     "providers.defaults": {
-      "text": "local-openai",
-      "object": "local-openai",
-      "embedding": "local-openai",
-      "structured": "local-openai",
-      "fallback": "local-openai"
+      "text": "openai-compat",
+      "object": "openai-compat",
+      "embedding": "openai-compat",
+      "structured": "openai-compat",
+      "fallback": "openai-compat"
     }
   }
 }
