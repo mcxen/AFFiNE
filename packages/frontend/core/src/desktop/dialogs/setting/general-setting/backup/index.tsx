@@ -271,11 +271,23 @@ const ConfigExportImport = () => {
     }
     const settings = editorSettingService.editorSetting.settings$.value;
     const customModelId = globalState.get<string>('ai-custom-model-id') ?? '';
+
+    // Export BYOK local keys (includes API keys — hence password protection)
+    let byokLocalKeys: unknown[] = [];
+    if (BUILD_CONFIG.isElectron) {
+      const { apis } = await import('@affine/electron-api');
+      const exporter = (apis?.byokStorage as any)?.exportWorkspaceKeys;
+      if (typeof exporter === 'function') {
+        byokLocalKeys = (await exporter(workspace.id)) ?? [];
+      }
+    }
+
     const configData = JSON.stringify({
       exportedAt: new Date().toISOString(),
       workspaceId: workspace.id,
       editorSettings: settings,
       aiCustomModelId: customModelId,
+      byokLocalKeys,
     });
     const encrypted = await encryptConfig(configData, password);
     const blob = new Blob([encrypted], { type: 'application/json' });
@@ -324,6 +336,19 @@ const ConfigExportImport = () => {
         if (config.aiCustomModelId) {
           globalState.set('ai-custom-model-id', config.aiCustomModelId);
         }
+        if (
+          BUILD_CONFIG.isElectron &&
+          Array.isArray(config.byokLocalKeys) &&
+          config.byokLocalKeys.length
+        ) {
+          const { apis } = await import('@affine/electron-api');
+          const upsert = apis?.byokStorage?.upsertWorkspaceKey;
+          if (typeof upsert === 'function') {
+            for (const key of config.byokLocalKeys) {
+              await upsert(workspace.id, key).catch(() => {});
+            }
+          }
+        }
         setImportModalOpen(false);
         setPassword('');
         notify.success({ title: 'Configuration imported successfully' });
@@ -337,7 +362,7 @@ const ConfigExportImport = () => {
       }
     };
     input.click();
-  }, [password, editorSettingService, globalState]);
+  }, [password, editorSettingService, globalState, workspace.id]);
 
   return (
     <>

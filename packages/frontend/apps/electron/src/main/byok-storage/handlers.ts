@@ -381,6 +381,10 @@ export const byokStorageHandlers = {
     byokStorage.del(workspaceId);
     return true;
   },
+  exportWorkspaceKeys: async (_e, workspaceId: string) => {
+    // Returns full key data including apiKey for config export
+    return readWorkspaceKeys(workspaceId);
+  },
   fetchWorkspaceModels: async (
     _e,
     workspaceId: string,
