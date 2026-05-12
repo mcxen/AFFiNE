@@ -12,7 +12,9 @@ import { InlineMarkdownExtension } from '@blocksuite/std/inline';
 export const CodeBlockMarkdownExtension =
   InlineMarkdownExtension<AffineTextAttributes>({
     name: 'code-block',
-    pattern: /^```([a-zA-Z0-9]*)\s$/,
+    // Match English triple backtick (```) or Chinese triple middle-dot (···)
+    // Both produce the same effect when followed by whitespace or newline
+    pattern: /^(?:`{3}|·{3})([a-zA-Z0-9]*)\s$/,
     action: ({ inlineEditor, inlineRange, prefixText, pattern }) => {
       if (inlineEditor.yTextString.slice(0, inlineRange.index).includes('\n')) {
         return;
