@@ -233,6 +233,23 @@ export const messageContent = style({
   background: cssVarV2('layer/background/secondary'),
 });
 
+export const messageDocs = style({
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 4,
+});
+
+export const messageDocChip = style({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 4,
+  padding: '2px 8px',
+  borderRadius: 4,
+  fontSize: 12,
+  color: cssVarV2('text/secondary'),
+  background: cssVarV2('layer/background/tertiary'),
+});
+
 export const markdownContent = style({
   display: 'flex',
   flexDirection: 'column',

@@ -36,6 +36,7 @@ type LocalChatMessage = {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  docs?: { docId: string; title: string }[];
 };
 
 type LocalChatContext = Pick<
@@ -380,6 +381,9 @@ export const Component = () => {
         id: createMessageId(),
         role: 'user',
         content,
+        docs: selectedDocs.length
+          ? selectedDocs.map(d => ({ docId: d.docId, title: d.title }))
+          : undefined,
       };
       const assistantMessage: LocalChatMessage = {
         id: createMessageId(),
@@ -463,6 +467,7 @@ export const Component = () => {
       } finally {
         setIsSending(false);
         setContext(null);
+        setSelectedDocs([]);
         loadSessions().catch(() => {});
         inputRef.current?.focus();
       }
@@ -640,6 +645,15 @@ export const Component = () => {
                   <div className={styles.messageRole}>
                     {message.role === 'user' ? 'You' : 'AFFiNE AI'}
                   </div>
+                  {message.role === 'user' && message.docs?.length ? (
+                    <div className={styles.messageDocs}>
+                      {message.docs.map(d => (
+                        <span key={d.docId} className={styles.messageDocChip}>
+                          📄 {d.title}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                   <div className={styles.messageContent}>
                     {message.content ? (
                       <MarkdownContent content={message.content} />
