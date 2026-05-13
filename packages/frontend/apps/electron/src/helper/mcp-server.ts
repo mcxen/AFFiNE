@@ -280,6 +280,54 @@ const listDocumentMetas = async (workspaceId: string) => {
     }) as DocumentMeta[];
 };
 
+const DB_DOC_PROPERTIES_ID = 'db$docProperties';
+
+/** Find the doc ID that has journal property set to the given date */
+const findJournalDocId = async (
+  workspaceId: string,
+  date: string
+): Promise<string | null> => {
+  const bin = await getMergedDocUpdate(workspaceId, DB_DOC_PROPERTIES_ID);
+  if (!bin) return null;
+  const doc = new YDoc();
+  applyUpdate(doc, bin);
+  // Each key in the doc is a docId, value is a YMap with properties
+  for (const [docId, record] of doc.getMap<any>('').entries
+    ? doc.getMap<any>('').entries()
+    : []) {
+    if (record?.get?.('journal') === date) {
+      return docId;
+    }
+  }
+  // Also check top-level maps (each docId is a top-level map key)
+  for (const key of doc.share.keys()) {
+    const map = doc.getMap(key);
+    if (map.get('journal') === date) {
+      return key;
+    }
+  }
+  return null;
+};
+
+/** Set the journal property for a doc in db$docProperties */
+const setJournalProperty = async (
+  workspaceId: string,
+  docId: string,
+  date: string
+) => {
+  const { pool, universalId } = await ensureWorkspaceConnected(workspaceId);
+  const bin = await getMergedDocUpdate(workspaceId, DB_DOC_PROPERTIES_ID);
+  const doc = new YDoc();
+  if (bin) applyUpdate(doc, bin);
+  doc.transact(() => {
+    const record = doc.getMap(docId);
+    record.set('id', docId);
+    record.set('journal', date);
+  });
+  const update = encodeStateAsUpdate(doc);
+  await pushUpdateAndNotify(pool, universalId, DB_DOC_PROPERTIES_ID, update);
+};
+
 const pushRootUpdate = async (workspaceId: string, update: Uint8Array) => {
   const { pool, universalId } = await ensureWorkspaceConnected(workspaceId);
   await pushUpdateAndNotify(pool, universalId, workspaceId, update);
@@ -703,16 +751,22 @@ const buildTools = (): ToolDefinition[] => [
         return error('Invalid date format. Use YYYY-MM-DD.');
       }
 
-      const docs = await listDocumentMetas(workspaceId);
-      const existing = docs.find(d => d.title === date);
-      if (existing) {
-        const docBin = await getMergedDocUpdate(workspaceId, existing.docId);
+      // Look up by journal property first
+      let existingDocId = await findJournalDocId(workspaceId, date);
+      // Fallback: look up by title
+      if (!existingDocId) {
+        const docs = await listDocumentMetas(workspaceId);
+        existingDocId = docs.find(d => d.title === date)?.docId ?? null;
+      }
+
+      if (existingDocId) {
+        const docBin = await getMergedDocUpdate(workspaceId, existingDocId);
         if (docBin) {
           const { parseDocToMarkdown } = await loadServerNative();
-          const result = parseDocToMarkdown(docBin, existing.docId, false);
+          const result = parseDocToMarkdown(docBin, existingDocId, false);
           return text({
             workspaceId,
-            docId: existing.docId,
+            docId: existingDocId,
             date,
             markdown: result.markdown,
           });
@@ -728,6 +782,8 @@ const buildTools = (): ToolDefinition[] => [
       const docId = nanoid();
       await pushUpdateAndNotify(pool, universalId, workspaceId, addDocToRootDoc(rootBin, docId, date));
       await pushUpdateAndNotify(pool, universalId, docId, createDocWithMarkdown(date, '', docId));
+      // Set journal property so AFFiNE recognizes it as a journal
+      await setJournalProperty(workspaceId, docId, date);
       return text({ workspaceId, docId, date, markdown: '', created: true });
     },
   },
@@ -753,8 +809,12 @@ const buildTools = (): ToolDefinition[] => [
         new Date().toISOString().slice(0, 10);
       const content = parseStringArg(args, 'content');
 
-      const docs = await listDocumentMetas(workspaceId);
-      let docId = docs.find(d => d.title === date)?.docId;
+      // Look up by journal property first, then fallback to title
+      let docId = await findJournalDocId(workspaceId, date);
+      if (!docId) {
+        const docs = await listDocumentMetas(workspaceId);
+        docId = docs.find(d => d.title === date)?.docId ?? null;
+      }
 
       if (!docId) {
         // Create journal first
@@ -767,6 +827,7 @@ const buildTools = (): ToolDefinition[] => [
         docId = nanoid();
         await pushUpdateAndNotify(pool, universalId, workspaceId, addDocToRootDoc(rootBin, docId, date));
         await pushUpdateAndNotify(pool, universalId, docId, createDocWithMarkdown(date, content, docId));
+        await setJournalProperty(workspaceId, docId, date);
         return text({ success: true, workspaceId, docId, date, created: true });
       }
 
