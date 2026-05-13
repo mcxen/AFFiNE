@@ -75,6 +75,27 @@ export function imageOcrToolbarConfig(): ToolbarModuleConfig {
                 });
             },
           },
+          {
+            id: 'b.edit-ocr-text',
+            label: 'Edit OCR Text',
+            icon: SelectTextIcon(),
+            when(ctx) {
+              const block = ctx.getCurrentBlockByType(ImageBlockComponent);
+              return !!(block?.model as any).props.ocrText$.peek();
+            },
+            run(ctx) {
+              const block = ctx.getCurrentBlockByType(ImageBlockComponent);
+              if (!block) return;
+
+              const current = (block.model as any).props.ocrText$.peek() || '';
+              const edited = window.prompt('Edit OCR Text:', current);
+              if (edited !== null) {
+                block.store.updateBlock(block.model, {
+                  ocrText: edited,
+                } as any);
+              }
+            },
+          },
         ],
       },
     ],
