@@ -467,7 +467,6 @@ export const Component = () => {
       } finally {
         setIsSending(false);
         setContext(null);
-        setSelectedDocs([]);
         loadSessions().catch(() => {});
         inputRef.current?.focus();
       }
