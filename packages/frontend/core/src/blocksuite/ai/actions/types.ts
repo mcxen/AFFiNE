@@ -448,6 +448,12 @@ declare global {
           typeof getCopilotHistoriesQuery
         >['variables']['options']
       ) => Promise<AIHistoryIds[] | undefined>;
+      updateMessage?: (
+        workspaceId: string,
+        sessionId: string,
+        messageId: string,
+        content: string
+      ) => Promise<boolean>;
     }
 
     interface AIPhotoEngineService {

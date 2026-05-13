@@ -1,7 +1,7 @@
 import path from 'node:path';
 
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
-import { generateText } from 'ai';
+import { generateText, streamText } from 'ai';
 import { app, safeStorage } from 'electron';
 
 import { logger } from '../logger';
@@ -152,17 +152,21 @@ async function requestOpenAICompatibleChat({
   modelId,
   content,
   signal,
+  messages,
 }: {
   key: WorkspaceByokKey;
   modelId: string;
   content: string;
   signal?: AbortSignal;
+  messages?: { role: 'user' | 'assistant'; content: string }[];
 }) {
   const { text } = await generateText({
     model: createOpenAICompatibleProvider(key)(modelId),
     system:
       'You are AFFiNE AI. Answer clearly and helpfully. Use markdown when it improves readability.',
-    prompt: content,
+    messages: messages?.length
+      ? [...messages, { role: 'user' as const, content }]
+      : [{ role: 'user' as const, content }],
     maxRetries: 0,
     abortSignal: signal,
   });
@@ -170,6 +174,34 @@ async function requestOpenAICompatibleChat({
     throw localChatError('empty provider response');
   }
   return text;
+}
+
+async function* requestOpenAICompatibleChatStream({
+  key,
+  modelId,
+  content,
+  signal,
+  messages,
+}: {
+  key: WorkspaceByokKey;
+  modelId: string;
+  content: string;
+  signal?: AbortSignal;
+  messages?: { role: 'user' | 'assistant'; content: string }[];
+}): AsyncGenerator<string> {
+  const result = streamText({
+    model: createOpenAICompatibleProvider(key)(modelId),
+    system:
+      'You are AFFiNE AI. Answer clearly and helpfully. Use markdown when it improves readability.',
+    messages: messages?.length
+      ? [...messages, { role: 'user' as const, content }]
+      : [{ role: 'user' as const, content }],
+    maxRetries: 0,
+    abortSignal: signal,
+  });
+  for await (const chunk of result.textStream) {
+    yield chunk;
+  }
 }
 
 function readWorkspaceKeys(workspaceId: string): WorkspaceByokKey[] {
@@ -237,6 +269,7 @@ export const byokStorageHandlers = {
         selectedMarkdown?: string;
         html?: string;
       };
+      messages?: { role: 'user' | 'assistant'; content: string }[];
     }
   ) => {
     const modelId = input.modelId?.trim();
@@ -277,7 +310,74 @@ export const byokStorageHandlers = {
           key,
           modelId,
           content,
+          messages: input.messages,
         });
+      } catch (error) {
+        failures.push(`${key.name}: ${sanitizeProbeError(error)}`);
+      }
+    }
+
+    throw new Error(failures.join('\n'));
+  },
+  chatCompletionsStream: async (
+    _e,
+    workspaceId: string,
+    input: {
+      modelId?: string;
+      content?: string;
+      contexts?: {
+        docs?: { docTitle?: string; docContent?: string }[];
+        files?: { fileName?: string; fileContent?: string }[];
+        selectedMarkdown?: string;
+        html?: string;
+      };
+      messages?: { role: 'user' | 'assistant'; content: string }[];
+    }
+  ): Promise<string[]> => {
+    const modelId = input.modelId?.trim();
+    if (!modelId) {
+      throw new Error('Model id is required for local AI requests.');
+    }
+
+    const keys = readWorkspaceKeysWithFallback(workspaceId).filter(
+      key => key.enabled !== false && key.provider === 'openai'
+    );
+    if (!keys.length) {
+      throw new Error('No enabled local OpenAI-compatible provider key found.');
+    }
+
+    const contextParts = [
+      ...(input.contexts?.docs ?? []).map(
+        doc =>
+          `<document title="${doc.docTitle ?? 'Untitled'}">\n${doc.docContent ?? ''}\n</document>`
+      ),
+      ...(input.contexts?.files ?? []).map(
+        file =>
+          `<file name="${file.fileName ?? 'Untitled'}">\n${file.fileContent ?? ''}\n</file>`
+      ),
+      input.contexts?.selectedMarkdown
+        ? `<selection>\n${input.contexts.selectedMarkdown}\n</selection>`
+        : '',
+      input.contexts?.html ? `<html>\n${input.contexts.html}\n</html>` : '',
+    ].filter(Boolean);
+    const content = [
+      ...contextParts,
+      input.content?.trim() || 'Continue.',
+    ].join('\n\n');
+
+    const failures: string[] = [];
+    for (const key of keys) {
+      try {
+        const chunks: string[] = [];
+        for await (const chunk of requestOpenAICompatibleChatStream({
+          key,
+          modelId,
+          content,
+          messages: input.messages,
+        })) {
+          chunks.push(chunk);
+        }
+        return chunks;
       } catch (error) {
         failures.push(`${key.name}: ${sanitizeProbeError(error)}`);
       }

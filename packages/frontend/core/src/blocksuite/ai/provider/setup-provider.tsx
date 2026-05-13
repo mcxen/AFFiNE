@@ -1104,6 +1104,19 @@ Could you make a new website based on these notes and send back just the html fi
       // @ts-expect-error - 'action' is missing in server impl
       return await client.getHistoryIds(workspaceId, {}, docId, options);
     },
+    updateMessage: async (
+      workspaceId: string,
+      sessionId: string,
+      messageId: string,
+      content: string
+    ): Promise<boolean> => {
+      if (isLocalSessionId(sessionId)) {
+        const api = chatHistoryApi();
+        if (!api?.updateMessage) return false;
+        return api.updateMessage(workspaceId, sessionId, messageId, content);
+      }
+      return false;
+    },
   });
 
   AIProvider.provide('photoEngine', {

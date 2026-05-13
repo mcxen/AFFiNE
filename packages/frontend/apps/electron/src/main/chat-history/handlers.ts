@@ -152,4 +152,28 @@ export const chatHistoryHandlers = {
     writeWorkspaceSessions(workspaceId, sessions);
     return true;
   },
+  updateMessage: async (
+    _e,
+    workspaceId: string,
+    sessionId: string,
+    messageId: string,
+    content: string
+  ): Promise<boolean> => {
+    const sessions = readWorkspaceSessions(workspaceId);
+    const s = sessions[sessionId];
+    if (!s) return false;
+    const msgIndex = s.messages.findIndex(m => m.id === messageId);
+    if (msgIndex === -1) return false;
+    const updatedMessages = [...s.messages];
+    updatedMessages[msgIndex] = { ...updatedMessages[msgIndex], content };
+    // Remove all messages after the edited one (for re-generation)
+    const trimmedMessages = updatedMessages.slice(0, msgIndex + 1);
+    sessions[sessionId] = {
+      ...s,
+      messages: trimmedMessages,
+      updatedAt: new Date().toISOString(),
+    };
+    writeWorkspaceSessions(workspaceId, sessions);
+    return true;
+  },
 } satisfies NamespaceHandlers;

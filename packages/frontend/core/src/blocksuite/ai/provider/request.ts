@@ -129,12 +129,47 @@ async function createWorkspaceByokLocalLease(
   }
 }
 
-function buildLocalChatStream(text: string) {
+function buildLocalChatStream(chunks: string[]) {
   return {
     [Symbol.asyncIterator]: async function* () {
-      yield text;
+      for (const chunk of chunks) {
+        yield chunk;
+      }
     },
   };
+}
+
+async function getSessionMessages(
+  workspaceId: string,
+  sessionId: string
+): Promise<{ role: 'user' | 'assistant'; content: string }[]> {
+  const chatHistory = (apis as any)?.chatHistory;
+  if (!chatHistory?.getSession) return [];
+  try {
+    const session = await chatHistory.getSession(workspaceId, sessionId);
+    if (!session?.messages?.length) return [];
+    return session.messages.map((m: any) => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content as string,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+async function autoGenerateTitle(
+  workspaceId: string,
+  sessionId: string,
+  firstUserMessage: string
+) {
+  const chatHistory = (apis as any)?.chatHistory;
+  if (!chatHistory?.updateSessionTitle) return;
+  // Simple title: first 50 chars of first message
+  const title =
+    firstUserMessage.slice(0, 50) + (firstUserMessage.length > 50 ? '...' : '');
+  await chatHistory
+    .updateSessionTitle(workspaceId, sessionId, title)
+    .catch(() => {});
 }
 
 async function localTextToText({
@@ -160,6 +195,11 @@ async function localTextToText({
   const isLocalSession =
     typeof sessionId === 'string' && sessionId.startsWith('local-');
 
+  // Load conversation history for context
+  const historyMessages = isLocalSession
+    ? await getSessionMessages(workspaceId, sessionId)
+    : [];
+
   // Persist user message first
   if (isLocalSession && chatHistory?.appendMessage && content) {
     await chatHistory
@@ -174,22 +214,49 @@ async function localTextToText({
         }
       )
       .catch(() => {});
+
+    // Auto-generate title on first message
+    if (historyMessages.length === 0) {
+      autoGenerateTitle(workspaceId, sessionId, content).catch(() => {});
+    }
   }
 
   try {
-    const response = await storage.chatCompletions(workspaceId, {
-      modelId,
-      content,
-      contexts: {
-        docs: params?.docs,
-        files: params?.files,
-        selectedMarkdown: params?.selectedMarkdown,
-        html: params?.html,
-      },
-    });
+    // Use streaming API and collect chunks
+    const chatCompletionsStream = (storage as any).chatCompletionsStream;
+    let chunks: string[];
+    if (typeof chatCompletionsStream === 'function') {
+      chunks = await chatCompletionsStream(workspaceId, {
+        modelId,
+        content,
+        contexts: {
+          docs: params?.docs,
+          files: params?.files,
+          selectedMarkdown: params?.selectedMarkdown,
+          html: params?.html,
+        },
+        messages: historyMessages,
+      });
+    } else {
+      // Fallback to non-streaming
+      const response = await (storage as any).chatCompletions(workspaceId, {
+        modelId,
+        content,
+        contexts: {
+          docs: params?.docs,
+          files: params?.files,
+          selectedMarkdown: params?.selectedMarkdown,
+          html: params?.html,
+        },
+        messages: historyMessages,
+      });
+      chunks = [response];
+    }
+
+    const fullResponse = chunks.join('');
 
     // Persist AI response
-    if (isLocalSession && chatHistory?.appendMessage && response) {
+    if (isLocalSession && chatHistory?.appendMessage && fullResponse) {
       await chatHistory
         .appendMessage(
           workspaceId,
@@ -197,14 +264,14 @@ async function localTextToText({
           {
             id: `msg-${Date.now()}-a`,
             role: 'assistant',
-            content: response,
+            content: fullResponse,
             createdAt: new Date().toISOString(),
           }
         )
         .catch(() => {});
     }
 
-    return response;
+    return chunks;
   } catch (error) {
     throw new Error(error instanceof Error ? error.message : String(error));
   }
@@ -452,7 +519,7 @@ export function textToText({
         toolsConfig,
       });
       if (localResult !== undefined) {
-        return localResult;
+        return localResult.join('');
       }
 
       if (!retry) {
