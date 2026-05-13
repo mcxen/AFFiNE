@@ -3,6 +3,7 @@ import { AIChatBlockSpec } from '@affine/core/blocksuite/ai/blocks';
 import { AITranscriptionBlockSpec } from '@affine/core/blocksuite/ai/blocks/ai-chat-block/ai-transcription-block';
 import { edgelessToolbarAIEntryConfig } from '@affine/core/blocksuite/ai/entries/edgeless';
 import { imageToolbarAIEntryConfig } from '@affine/core/blocksuite/ai/entries/image-toolbar/setup-image-toolbar';
+import { imageOcrToolbarConfig } from '@affine/core/blocksuite/ai/entries/image-toolbar/ocr-toolbar';
 import { AICodeBlockWatcher } from '@affine/core/blocksuite/ai/extensions/ai-code';
 import { getAIEdgelessRootWatcher } from '@affine/core/blocksuite/ai/extensions/ai-edgeless-root';
 import { getAIPageRootWatcher } from '@affine/core/blocksuite/ai/extensions/ai-page-root';
@@ -55,6 +56,12 @@ export class AIViewExtension extends ViewExtensionProvider<AIViewOptions> {
         ToolbarModuleExtension({
           id: BlockFlavourIdentifier('custom:affine:image'),
           config: imageToolbarAIEntryConfig(),
+        })
+      )
+      .register(
+        ToolbarModuleExtension({
+          id: BlockFlavourIdentifier('custom:affine:image:ocr'),
+          config: imageOcrToolbarConfig(),
         })
       );
 

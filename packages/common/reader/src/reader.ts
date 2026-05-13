@@ -328,6 +328,10 @@ function generateMarkdownPreviewBuilder(
       info.push(`with caption ${model.props.caption}`);
     }
 
+    if ((model.props as any).ocrText) {
+      info.push((model.props as any).ocrText);
+    }
+
     return info.join(', ') + '\n';
   };
 
