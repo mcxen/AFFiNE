@@ -28,6 +28,124 @@ export const localStatus = style({
   color: cssVarV2('text/secondary'),
 });
 
+export const headerActions = style({
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+});
+
+export const headerButton = style({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 28,
+  height: 28,
+  border: 'none',
+  borderRadius: 6,
+  background: 'transparent',
+  color: cssVarV2('icon/primary'),
+  cursor: 'pointer',
+  fontSize: 16,
+  ':hover': {
+    background: cssVarV2('layer/background/hoverOverlay'),
+  },
+});
+
+export const chatLayout = style({
+  width: '100%',
+  height: '100%',
+  display: 'flex',
+  minHeight: 0,
+});
+
+export const historySidebar = style({
+  width: 240,
+  height: '100%',
+  minHeight: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  borderRight: `0.5px solid ${cssVarV2('layer/insideBorder/border')}`,
+  background: cssVarV2('layer/background/secondary'),
+});
+
+export const historyHeader = style({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: '12px 12px 8px',
+  fontSize: 12,
+  fontWeight: 600,
+  color: cssVarV2('text/secondary'),
+});
+
+export const historyList = style({
+  flex: 1,
+  minHeight: 0,
+  overflowY: 'auto',
+  padding: '0 8px 8px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 2,
+});
+
+export const historyItem = style({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: '6px 8px',
+  borderRadius: 6,
+  cursor: 'pointer',
+  fontSize: 13,
+  color: cssVarV2('text/primary'),
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  ':hover': {
+    background: cssVarV2('layer/background/hoverOverlay'),
+  },
+  selectors: {
+    '&[data-active="true"]': {
+      background: cssVarV2('layer/background/hoverOverlay'),
+      fontWeight: 500,
+    },
+  },
+});
+
+export const historyItemTitle = style({
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  flex: 1,
+});
+
+export const historyItemDelete = style({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 20,
+  height: 20,
+  borderRadius: 4,
+  border: 'none',
+  background: 'transparent',
+  color: cssVarV2('icon/secondary'),
+  cursor: 'pointer',
+  opacity: 0,
+  flexShrink: 0,
+  fontSize: 14,
+  selectors: {
+    [`${historyItem}:hover &`]: {
+      opacity: 1,
+    },
+  },
+});
+
+export const historyEmpty = style({
+  padding: '24px 12px',
+  textAlign: 'center',
+  fontSize: 12,
+  color: cssVarV2('text/secondary'),
+});
+
 export const localRoot = style({
   width: '100%',
   height: '100%',

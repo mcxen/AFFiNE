@@ -179,6 +179,11 @@ export const Component = () => {
   const [isSending, setIsSending] = useState(false);
   const [hasProvider, setHasProvider] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessions, setSessions] = useState<
+    { sessionId: string; title: string | null; updatedAt: string }[]
+  >([]);
+  const [showHistory, setShowHistory] = useState(true);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const modelId = aiModelService.getModelId()?.trim();
@@ -212,6 +217,83 @@ export const Component = () => {
       cancelled = true;
     };
   }, [workspaceId]);
+
+  // Load session list
+  const loadSessions = useCallback(async () => {
+    const chatHistory = (apis as any)?.chatHistory;
+    if (!chatHistory?.listSessions) return;
+    try {
+      const list = await chatHistory.listSessions(workspaceId, {});
+      setSessions(
+        (list || []).map((s: any) => ({
+          sessionId: s.sessionId,
+          title: s.title,
+          updatedAt: s.updatedAt,
+        }))
+      );
+    } catch {
+      // ignore
+    }
+  }, [workspaceId]);
+
+  useEffect(() => {
+    loadSessions().catch(() => {});
+  }, [loadSessions]);
+
+  // Load a session's messages
+  const openSession = useCallback(
+    async (sid: string) => {
+      const chatHistory = (apis as any)?.chatHistory;
+      if (!chatHistory?.getSession) return;
+      try {
+        const session = await chatHistory.getSession(workspaceId, sid);
+        if (session?.messages) {
+          setMessages(
+            session.messages.map((m: any) => ({
+              id: m.id,
+              role: m.role,
+              content: m.content,
+            }))
+          );
+          setSessionId(sid);
+        }
+      } catch {
+        // ignore
+      }
+    },
+    [workspaceId]
+  );
+
+  // New chat
+  const newChat = useCallback(() => {
+    const newId = `local-${crypto.randomUUID()}`;
+    setSessionId(newId);
+    setMessages([]);
+    setContext(null);
+    setError(null);
+    inputRef.current?.focus();
+  }, []);
+
+  // Delete a session
+  const deleteSessionById = useCallback(
+    async (sid: string) => {
+      const chatHistory = (apis as any)?.chatHistory;
+      if (!chatHistory?.deleteSessions) return;
+      await chatHistory.deleteSessions(workspaceId, [sid]).catch(() => {});
+      setSessions(prev => prev.filter(s => s.sessionId !== sid));
+      if (sessionId === sid) {
+        newChat();
+      }
+    },
+    [workspaceId, sessionId, newChat]
+  );
+
+  // Initialize with a new session ID if none
+  useEffect(() => {
+    if (!sessionId) {
+      setSessionId(`local-${crypto.randomUUID()}`);
+    }
+  }, [sessionId]);
 
   const statusText = useMemo(() => {
     if (hasProvider === null) {
@@ -290,6 +372,10 @@ export const Component = () => {
         return;
       }
 
+      const chatHistory = (apis as any)?.chatHistory;
+      const currentSessionId = sessionId || `local-${crypto.randomUUID()}`;
+      if (!sessionId) setSessionId(currentSessionId);
+
       const userMessage: LocalChatMessage = {
         id: createMessageId(),
         role: 'user',
@@ -309,6 +395,25 @@ export const Component = () => {
       setIsSending(true);
       setMessages(nextMessages);
 
+      // Persist user message
+      if (chatHistory?.appendMessage) {
+        await chatHistory
+          .appendMessage(
+            workspaceId,
+            { sessionId: currentSessionId, model: modelId },
+            { ...userMessage, createdAt: new Date().toISOString() }
+          )
+          .catch(() => {});
+        // Auto-generate title on first message
+        if (messages.length === 0 && chatHistory.updateSessionTitle) {
+          const title =
+            content.slice(0, 50) + (content.length > 50 ? '...' : '');
+          await chatHistory
+            .updateSessionTitle(workspaceId, currentSessionId, title)
+            .catch(() => {});
+        }
+      }
+
       try {
         const answer = await storage.chatCompletions(workspaceId, {
           modelId,
@@ -323,7 +428,7 @@ export const Component = () => {
                   })),
                 }
               : undefined,
-        });
+        } as any);
         setMessages(current =>
           current.map(message =>
             message.id === assistantMessage.id
@@ -331,6 +436,20 @@ export const Component = () => {
               : message
           )
         );
+        // Persist assistant message
+        if (chatHistory?.appendMessage) {
+          await chatHistory
+            .appendMessage(
+              workspaceId,
+              { sessionId: currentSessionId, model: modelId },
+              {
+                ...assistantMessage,
+                content: answer || '(empty response)',
+                createdAt: new Date().toISOString(),
+              }
+            )
+            .catch(() => {});
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         setError(message);
@@ -344,10 +463,20 @@ export const Component = () => {
       } finally {
         setIsSending(false);
         setContext(null);
+        loadSessions().catch(() => {});
         inputRef.current?.focus();
       }
     },
-    [context, isSending, messages, modelId, selectedDocs, workspaceId]
+    [
+      context,
+      isSending,
+      messages,
+      modelId,
+      selectedDocs,
+      workspaceId,
+      sessionId,
+      loadSessions,
+    ]
   );
 
   const send = useCallback(async () => {
@@ -439,10 +568,64 @@ export const Component = () => {
         <div className={styles.localHeader}>
           <div className={styles.localTitle}>AFFiNE AI</div>
           <div className={styles.localStatus}>{statusText}</div>
+          <div className={styles.headerActions}>
+            <button
+              className={styles.headerButton}
+              type="button"
+              onClick={newChat}
+              title="New Chat"
+            >
+              +
+            </button>
+            <button
+              className={styles.headerButton}
+              type="button"
+              onClick={() => setShowHistory(prev => !prev)}
+              title="Chat History"
+            >
+              ☰
+            </button>
+          </div>
         </div>
       </ViewHeader>
       <ViewBody>
-        <div className={styles.localRoot}>
+        <div className={styles.chatLayout}>
+          {showHistory && (
+            <div className={styles.historySidebar}>
+              <div className={styles.historyHeader}>
+                <span>History</span>
+              </div>
+              <div className={styles.historyList}>
+                {sessions.length === 0 ? (
+                  <div className={styles.historyEmpty}>No conversations yet</div>
+                ) : (
+                  sessions.map(s => (
+                    <div
+                      key={s.sessionId}
+                      className={styles.historyItem}
+                      data-active={s.sessionId === sessionId}
+                      onClick={() => openSession(s.sessionId).catch(() => {})}
+                    >
+                      <span className={styles.historyItemTitle}>
+                        {s.title || 'New chat'}
+                      </span>
+                      <button
+                        className={styles.historyItemDelete}
+                        type="button"
+                        onClick={e => {
+                          e.stopPropagation();
+                          deleteSessionById(s.sessionId).catch(() => {});
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+          <div className={styles.localRoot}>
           <div className={styles.messages}>
             {messages.length ? (
               messages.map(message => (
@@ -556,6 +739,7 @@ export const Component = () => {
           <div className={styles.disclaimer}>
             AI outputs can be misleading or wrong
           </div>
+        </div>
         </div>
       </ViewBody>
     </>
