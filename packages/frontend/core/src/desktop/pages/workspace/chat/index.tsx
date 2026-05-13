@@ -601,14 +601,18 @@ export const Component = () => {
               </div>
               <div className={styles.historyList}>
                 {sessions.length === 0 ? (
-                  <div className={styles.historyEmpty}>No conversations yet</div>
+                  <div className={styles.historyEmpty}>
+                    No conversations yet
+                  </div>
                 ) : (
                   sessions.map(s => (
                     <div
                       key={s.sessionId}
                       className={styles.historyItem}
                       data-active={s.sessionId === sessionId}
-                      onClick={() => openSession(s.sessionId).catch(() => {})}
+                      onClick={() => {
+                        void openSession(s.sessionId).catch(() => {});
+                      }}
                     >
                       <span className={styles.historyItemTitle}>
                         {s.title || 'New chat'}
@@ -618,7 +622,7 @@ export const Component = () => {
                         type="button"
                         onClick={e => {
                           e.stopPropagation();
-                          deleteSessionById(s.sessionId).catch(() => {});
+                          void deleteSessionById(s.sessionId).catch(() => {});
                         }}
                       >
                         ×
@@ -630,129 +634,133 @@ export const Component = () => {
             </div>
           )}
           <div className={styles.localRoot}>
-          <div className={styles.messages}>
-            {messages.length ? (
-              messages.map(message => (
-                <div
-                  key={message.id}
-                  className={
-                    message.role === 'user'
-                      ? styles.userMessage
-                      : styles.assistantMessage
-                  }
-                >
-                  <div className={styles.messageRole}>
-                    {message.role === 'user' ? 'You' : 'AFFiNE AI'}
-                  </div>
-                  {message.role === 'user' && message.docs?.length ? (
-                    <div className={styles.messageDocs}>
-                      {message.docs.map(d => (
-                        <span key={d.docId} className={styles.messageDocChip}>
-                          📄 {d.title}
-                        </span>
-                      ))}
+            <div className={styles.messages}>
+              {messages.length ? (
+                messages.map(message => (
+                  <div
+                    key={message.id}
+                    className={
+                      message.role === 'user'
+                        ? styles.userMessage
+                        : styles.assistantMessage
+                    }
+                  >
+                    <div className={styles.messageRole}>
+                      {message.role === 'user' ? 'You' : 'AFFiNE AI'}
                     </div>
-                  ) : null}
-                  <div className={styles.messageContent}>
-                    {message.content ? (
-                      <MarkdownContent content={message.content} />
-                    ) : isSending ? (
-                      'Thinking...'
-                    ) : (
-                      ''
-                    )}
+                    {message.role === 'user' && message.docs?.length ? (
+                      <div className={styles.messageDocs}>
+                        {message.docs.map(d => (
+                          <span key={d.docId} className={styles.messageDocChip}>
+                            📄 {d.title}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                    <div className={styles.messageContent}>
+                      {message.content ? (
+                        <MarkdownContent content={message.content} />
+                      ) : isSending ? (
+                        'Thinking...'
+                      ) : (
+                        ''
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className={styles.emptyState}>
+                  <div className={styles.emptyIcon}>✦</div>
+                  <div className={styles.emptyTitle}>
+                    What can I help you with?
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className={styles.emptyState}>
-                <div className={styles.emptyIcon}>✦</div>
-                <div className={styles.emptyTitle}>
-                  What can I help you with?
-                </div>
+              )}
+            </div>
+
+            {error ? <div className={styles.error}>{error}</div> : null}
+
+            <div className={styles.inputPanel}>
+              <div className={styles.docContextRow}>
+                <select
+                  className={styles.docSelect}
+                  value=""
+                  disabled={isAddingDoc || !docOptions.length}
+                  onChange={event => {
+                    addDocumentContext(event.target.value).catch(console.error);
+                  }}
+                >
+                  <option value="">
+                    {isAddingDoc
+                      ? 'Adding document...'
+                      : 'Add document context'}
+                  </option>
+                  {docOptions.map(doc => (
+                    <option key={doc.docId} value={doc.docId}>
+                      {doc.title}
+                    </option>
+                  ))}
+                </select>
+                {selectedDocs.map(doc => (
+                  <button
+                    key={doc.docId}
+                    className={styles.docChip}
+                    type="button"
+                    onClick={() =>
+                      setSelectedDocs(current =>
+                        current.filter(item => item.docId !== doc.docId)
+                      )
+                    }
+                  >
+                    {doc.title}
+                    <span>×</span>
+                  </button>
+                ))}
               </div>
-            )}
-          </div>
-
-          {error ? <div className={styles.error}>{error}</div> : null}
-
-          <div className={styles.inputPanel}>
-            <div className={styles.docContextRow}>
-              <select
-                className={styles.docSelect}
-                value=""
-                disabled={isAddingDoc || !docOptions.length}
-                onChange={event => {
-                  addDocumentContext(event.target.value).catch(console.error);
+              {contextMarkdown ? (
+                <div className={styles.contextPill}>
+                  <span className={styles.contextLabel}>Selected context</span>
+                  <span className={styles.contextPreview}>
+                    {contextMarkdown}
+                  </span>
+                  <button
+                    className={styles.clearContextButton}
+                    type="button"
+                    onClick={() => setContext(null)}
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : null}
+              <textarea
+                ref={inputRef}
+                className={styles.input}
+                value={input}
+                placeholder="What are your thoughts?"
+                rows={3}
+                onChange={event => setInput(event.target.value)}
+                onKeyDown={event => {
+                  if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    send().catch(console.error);
+                  }
+                }}
+              />
+              <button
+                className={styles.sendButton}
+                type="button"
+                disabled={!canSend}
+                onClick={() => {
+                  send().catch(console.error);
                 }}
               >
-                <option value="">
-                  {isAddingDoc ? 'Adding document...' : 'Add document context'}
-                </option>
-                {docOptions.map(doc => (
-                  <option key={doc.docId} value={doc.docId}>
-                    {doc.title}
-                  </option>
-                ))}
-              </select>
-              {selectedDocs.map(doc => (
-                <button
-                  key={doc.docId}
-                  className={styles.docChip}
-                  type="button"
-                  onClick={() =>
-                    setSelectedDocs(current =>
-                      current.filter(item => item.docId !== doc.docId)
-                    )
-                  }
-                >
-                  {doc.title}
-                  <span>×</span>
-                </button>
-              ))}
+                ↑
+              </button>
             </div>
-            {contextMarkdown ? (
-              <div className={styles.contextPill}>
-                <span className={styles.contextLabel}>Selected context</span>
-                <span className={styles.contextPreview}>{contextMarkdown}</span>
-                <button
-                  className={styles.clearContextButton}
-                  type="button"
-                  onClick={() => setContext(null)}
-                >
-                  ×
-                </button>
-              </div>
-            ) : null}
-            <textarea
-              ref={inputRef}
-              className={styles.input}
-              value={input}
-              placeholder="What are your thoughts?"
-              rows={3}
-              onChange={event => setInput(event.target.value)}
-              onKeyDown={event => {
-                if (event.key === 'Enter' && !event.shiftKey) {
-                  event.preventDefault();
-                  send().catch(console.error);
-                }
-              }}
-            />
-            <button
-              className={styles.sendButton}
-              type="button"
-              disabled={!canSend}
-              onClick={() => {
-                send().catch(console.error);
-              }}
-            >
-              ↑
-            </button>
+            <div className={styles.disclaimer}>
+              AI outputs can be misleading or wrong
+            </div>
           </div>
-          <div className={styles.disclaimer}>
-            AI outputs can be misleading or wrong
-          </div>
-        </div>
         </div>
       </ViewBody>
     </>

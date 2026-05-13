@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { EnableCloudPanel } from '../preference/enable-cloud';
 import { BlobManagementPanel } from './blob-management';
+import { ConfigExportImport } from './config-export-import';
 import { DesktopExportPanel } from './export';
 import * as styles from './style.css';
 
@@ -224,6 +225,7 @@ export const WorkspaceSettingStorage = ({
       <SettingWrapper>
         <WorkspaceStorageUsagePanel />
       </SettingWrapper>
+      <ConfigExportImport />
       {workspace.flavour === 'local' ? (
         <>
           <EnableCloudPanel onCloseSetting={onCloseSetting} />{' '}
