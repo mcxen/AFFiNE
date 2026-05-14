@@ -17,6 +17,7 @@ export type EmbedCardStyle =
   | 'video'
   | 'figma'
   | 'html'
+  | 'drawio'
   | 'syncedDoc'
   | 'pdf'
   | 'citation'

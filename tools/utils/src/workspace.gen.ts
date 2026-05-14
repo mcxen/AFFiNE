@@ -1198,6 +1198,7 @@ export const PackageList = [
       'packages/frontend/i18n',
       'packages/frontend/native',
       'packages/common/nbstore',
+      'packages/backend/native',
       'packages/common/infra',
     ],
   },

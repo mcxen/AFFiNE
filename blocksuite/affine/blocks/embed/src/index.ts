@@ -10,6 +10,7 @@ export { insertEmbedCard } from './common/insert-embed-card';
 export * from './common/render-linked-doc';
 export { toEdgelessEmbedBlock } from './common/to-edgeless-embed-block';
 export * from './common/utils';
+export * from './embed-drawio-block';
 export * from './embed-figma-block';
 export * from './embed-github-block';
 export * from './embed-html-block';

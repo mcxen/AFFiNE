@@ -11,6 +11,7 @@
     { "path": "../../i18n" },
     { "path": "../../native" },
     { "path": "../../../common/nbstore" },
+    { "path": "../../../backend/native" },
     { "path": "../../../common/infra" }
   ]
 }

@@ -4,6 +4,7 @@ import {
 } from '@blocksuite/affine-ext-loader';
 
 import { effects } from './effects';
+import { EmbedDrawioViewExtensions } from './embed-drawio-block';
 import {
   EdgelessClipboardEmbedFigmaConfig,
   EmbedFigmaViewExtensions,
@@ -45,6 +46,7 @@ export class EmbedViewExtension extends ViewExtensionProvider {
 
   override setup(context: ViewExtensionContext) {
     super.setup(context);
+    context.register(EmbedDrawioViewExtensions);
     context.register(EmbedFigmaViewExtensions);
     context.register(EmbedGithubViewExtensions);
     context.register(EmbedLoomViewExtensions);
