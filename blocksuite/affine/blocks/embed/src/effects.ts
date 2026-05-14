@@ -1,4 +1,3 @@
-import { EmbedDrawioBlockComponent } from './embed-drawio-block';
 import { EmbedFigmaBlockComponent } from './embed-figma-block';
 import { EmbedEdgelessBlockComponent } from './embed-figma-block/embed-edgeless-figma-block';
 import { EmbedGithubBlockComponent } from './embed-github-block';
@@ -19,7 +18,6 @@ import { EmbedYoutubeBlockComponent } from './embed-youtube-block';
 import { EmbedEdgelessYoutubeBlockComponent } from './embed-youtube-block/embed-edgeless-youtube-block';
 
 export function effects() {
-  customElements.define('affine-embed-drawio-block', EmbedDrawioBlockComponent);
   customElements.define(
     'affine-embed-edgeless-figma-block',
     EmbedEdgelessBlockComponent
@@ -77,7 +75,6 @@ export function effects() {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'affine-embed-drawio-block': EmbedDrawioBlockComponent;
     'affine-embed-figma-block': EmbedFigmaBlockComponent;
     'affine-embed-edgeless-figma-block': EmbedEdgelessBlockComponent;
     'affine-embed-github-block': EmbedGithubBlockComponent;

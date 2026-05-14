@@ -3,7 +3,6 @@ import {
   StoreExtensionProvider,
 } from '@blocksuite/affine-ext-loader';
 import {
-  EmbedDrawioBlockSchemaExtension,
   EmbedFigmaBlockSchemaExtension,
   EmbedGithubBlockSchemaExtension,
   EmbedHtmlBlockSchemaExtension,
@@ -15,7 +14,6 @@ import {
 } from '@blocksuite/affine-model';
 import { EmbedIframeService } from '@blocksuite/affine-shared/services';
 
-import { EmbedDrawioBlockAdapterExtensions } from './embed-drawio-block/adapters';
 import { EmbedFigmaBlockAdapterExtensions } from './embed-figma-block/adapters/extension';
 import { EmbedGithubBlockAdapterExtensions } from './embed-github-block/adapters/extension';
 import { EmbedIframeConfigExtensions } from './embed-iframe-block';
@@ -37,9 +35,7 @@ export class EmbedStoreExtension extends StoreExtensionProvider {
       EmbedFigmaBlockSchemaExtension,
       EmbedLoomBlockSchemaExtension,
       EmbedYoutubeBlockSchemaExtension,
-      EmbedDrawioBlockSchemaExtension,
     ]);
-    context.register(EmbedDrawioBlockAdapterExtensions);
     context.register(EmbedFigmaBlockAdapterExtensions);
     context.register(EmbedGithubBlockAdapterExtensions);
     context.register(EmbedYoutubeBlockAdapterExtensions);

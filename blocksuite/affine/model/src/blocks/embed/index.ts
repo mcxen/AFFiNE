@@ -1,4 +1,3 @@
-export * from './drawio/index';
 export * from './figma/index';
 export * from './github/index';
 export * from './html/index';
