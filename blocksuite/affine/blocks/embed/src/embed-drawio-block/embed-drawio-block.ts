@@ -11,7 +11,7 @@ import { EmbedBlockComponent } from '../common/embed-block-element.js';
 import { styles } from './styles.js';
 
 const DRAWIO_EDITOR_URL =
-  '/static/drawio/index.html?embed=1&proto=json&spin=1&libraries=1&offline=1&local=1';
+  'https://embed.diagrams.net/?embed=1&proto=json&spin=1&libraries=1&configure=1';
 
 export class EmbedDrawioBlockComponent extends EmbedBlockComponent<EmbedDrawioModel> {
   static override styles = styles;
@@ -21,7 +21,6 @@ export class EmbedDrawioBlockComponent extends EmbedBlockComponent<EmbedDrawioMo
   @state()
   private accessor _editorOpen = false;
 
-  private _editorIframe: HTMLIFrameElement | null = null;
 
   private _handleDoubleClick(event: MouseEvent) {
     event.stopPropagation();
@@ -43,7 +42,6 @@ export class EmbedDrawioBlockComponent extends EmbedBlockComponent<EmbedDrawioMo
 
   private _closeEditor() {
     this._editorOpen = false;
-    this._editorIframe = null;
   }
 
   private readonly _handleMessage = (event: MessageEvent) => {
@@ -55,16 +53,20 @@ export class EmbedDrawioBlockComponent extends EmbedBlockComponent<EmbedDrawioMo
       return;
     }
 
+    const iframe = this.renderRoot?.querySelector(
+      '.embed-drawio-editor-iframe'
+    ) as HTMLIFrameElement | null;
+
     if (msg.event === 'init') {
       const xml = this.model.props.xml || '';
-      this._editorIframe?.contentWindow?.postMessage(
+      iframe?.contentWindow?.postMessage(
         JSON.stringify({ action: 'load', xml, autosave: 1 }),
         '*'
       );
     } else if (msg.event === 'save' || msg.event === 'autosave') {
       if (msg.xml) {
         this.std.store.updateBlock(this.blockId, { xml: msg.xml });
-        this._editorIframe?.contentWindow?.postMessage(
+        iframe?.contentWindow?.postMessage(
           JSON.stringify({ action: 'export', format: 'svg' }),
           '*'
         );
@@ -78,9 +80,6 @@ export class EmbedDrawioBlockComponent extends EmbedBlockComponent<EmbedDrawioMo
     }
   };
 
-  private readonly _onIframeLoad = (e: Event) => {
-    this._editorIframe = e.target as HTMLIFrameElement;
-  };
 
   override connectedCallback() {
     super.connectedCallback();
@@ -143,7 +142,6 @@ export class EmbedDrawioBlockComponent extends EmbedBlockComponent<EmbedDrawioMo
                     class="embed-drawio-editor-iframe"
                     src="${DRAWIO_EDITOR_URL}"
                     allow="clipboard-read; clipboard-write"
-                    @load=${this._onIframeLoad}
                   ></iframe>
                 </div>
               </div>
