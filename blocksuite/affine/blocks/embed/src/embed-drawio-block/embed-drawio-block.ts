@@ -10,9 +10,8 @@ import { classMap } from 'lit/directives/class-map.js';
 import { EmbedBlockComponent } from '../common/embed-block-element.js';
 import { styles } from './styles.js';
 
-const DRAWIO_EDITOR_URL = '/static/drawio/index.html';
-const DRAWIO_PARAMS =
-  'embed=1&proto=json&spin=1&libraries=1&offline=1&local=1&noSaveBtn=1&noExitBtn=1';
+const DRAWIO_EDITOR_URL =
+  '/static/drawio/index.html?embed=1&proto=json&spin=1&libraries=1&offline=1&local=1';
 
 export class EmbedDrawioBlockComponent extends EmbedBlockComponent<EmbedDrawioModel> {
   static override styles = styles;
@@ -142,7 +141,7 @@ export class EmbedDrawioBlockComponent extends EmbedBlockComponent<EmbedDrawioMo
                   </div>
                   <iframe
                     class="embed-drawio-editor-iframe"
-                    src="${DRAWIO_EDITOR_URL}?${DRAWIO_PARAMS}"
+                    src="${DRAWIO_EDITOR_URL}"
                     allow="clipboard-read; clipboard-write"
                     @load=${this._onIframeLoad}
                   ></iframe>

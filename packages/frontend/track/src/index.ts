@@ -21,6 +21,7 @@ export const sentry = {
 
 export const tracker = {
   track: () => {},
+  track_pageview: () => {},
   page: () => {},
   identify: () => {},
   reset: () => {},
